@@ -10,7 +10,11 @@
             <div class="col-md-12 col-lg-7">
                 <h3 class="display-6 text-dark"><i class="fas fa-coins"></i> Coin Auctions <i class="fas fa-gavel"></i>
                 </h3>
-
+                {% if user.is_authenticated %}
+                <h3>Hello, {{ user.username }}!!</h3>
+                {% else %}
+                <h3>Hello, Guest!!</h3>
+                {% endif %}
                 <h1 class="mb-5 display-3 text-blue">Discover Unique Coins & Collectibles</h1>
                 <div class="position-relative mx-auto">
                     <a href="#"

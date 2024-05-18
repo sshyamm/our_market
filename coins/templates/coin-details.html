@@ -6,7 +6,7 @@
 <div class="container-fluid page-header py-5">
     <h1 class="text-center text-white display-6">Coin Details</h1>
     <ol class="breadcrumb justify-content-center mb-0">
-        <li class="breadcrumb-item"><a href="#">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
         <li class="breadcrumb-item active text-white">Coin Details</li>
     </ol>
 </div>
@@ -103,13 +103,12 @@
                                                     <p class="mb-0">{{ coin.starting_bid }}</p>
                                                 </div>
                                             </div>
-                                            <div
-                                                class="row bg-light text-center align-items-center justify-content-center py-2">
+                                            <div class="row text-center align-items-center justify-content-center py-2">
                                                 <div class="col-6">
                                                     <p class="mb-0">Status</p>
                                                 </div>
                                                 <div class="col-6">
-                                                    <p class="mb-0">{{ coin.coin_status}}</p>
+                                                    <p class="mb-0">{{ coin.coin_status }}</p>
                                                 </div>
                                             </div>
                                         </div>

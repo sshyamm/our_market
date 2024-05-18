@@ -50,246 +50,27 @@
                     </div>
                     <div class="col-lg-9">
                         <div class="row g-4 justify-content-center">
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin2.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
+                            {% for coin in coins %}
+                                <div class="col-md-6 col-lg-6 col-xl-4">
+                                    <div class="rounded position-relative fruite-item">
+                                        <div class="fruite-img">
+                                            <a href="{% url 'coin-details' coin.id %}"><img src="{{ coin.coin_image.url }}"
+                                                class="img-fluid w-100 rounded-top" alt=""></a>
+                                        </div>
+                                        <div class="p-4 border-top-0 rounded-bottom">
+                                            <h4>{{ coin.coin_name }}</h4>
+                                            <p>{{ coin.coin_desc }}</p>
+                                            <div class="d-flex justify-content-between flex-lg-wrap">
+                                                <p class="text-dark fs-5 fw-bold mb-0">{{ coin.rate }} /-</p>
+                                                <a href="#"
+                                                    class="btn border border-secondary rounded-pill px-3 text-blue"><i
+                                                        class="fa fa-shopping-bag me-2 text-blue"></i> Add to
+                                                    cart</a>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin1.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin2.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin1.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin2.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin1.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin2.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin1.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin2.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin1.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin2.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-6 col-lg-6 col-xl-4">
-                                <div class="rounded position-relative fruite-item">
-                                    <div class="fruite-img">
-                                        <a href="{% url 'coin-details' %}"><img src="{% static 'img/carousel_coin1.jpg' %}"
-                                            class="img-fluid w-100 rounded-top" alt=""></a>
-                                    </div>
-                                    <div class="p-4 border-top-0 rounded-bottom">
-                                        <h4>American</h4>
-                                        <p>Lorem ipsum dolor sit amet consectetur adipisicing elit sed do eiusmod te
-                                            incididunt</p>
-                                        <div class="d-flex justify-content-between flex-lg-wrap">
-                                            <p class="text-dark fs-5 fw-bold mb-0">7000 /-</p>
-                                            <a href="#"
-                                                class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                    class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                cart</a>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            {% endfor %}
                             <div class="col-12">
                                 <div class="pagination d-flex justify-content-center mt-5">
                                     <a href="#" class="rounded">&laquo;</a>

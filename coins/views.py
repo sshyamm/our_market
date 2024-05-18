@@ -8,8 +8,9 @@ def home(request):
     return render(request, 'home.html', {'coins': coins, 'company': company})
 
 def auctions(request):
+    coins = Coin.objects.all()  # Fetch all coins
     company = Company.objects.first()
-    return render(request, 'auctions.html', {'company': company})
+    return render(request, 'auctions.html', {'coins': coins, 'company': company})
 
 def coin_details(request, coin_id):
     coin = get_object_or_404(Coin, id=coin_id)
