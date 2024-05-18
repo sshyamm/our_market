@@ -77,8 +77,12 @@ WSGI_APPLICATION = 'our_market.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'djongo',
+        'ENFORCE_SCHEMA': False,  # Set this to True to enforce MongoDB schema validation
+        'CLIENT': {
+            'host': 'mongodb://localhost:27017/',
+        },
+        'NAME': 'our_market',  # Specify your desired database name here
     }
 }
 
@@ -120,5 +124,8 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
+
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
