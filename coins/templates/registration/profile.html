@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap4 %}
+{% block content %}
+<div class="container-fluid page-header py-5 bg-primary">
+  <h1 class="text-center text-white display-6">My Profile</h1>
+  <ol class="breadcrumb justify-content-center mb-0">
+      <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white">Home</a></li>
+      <li class="breadcrumb-item active text-white">My Profile</li>
+  </ol>
+</div>
+<div class="container-fluid py-5">
+  <div class="container py-5">
+    <div class="row justify-content-center">
+      <div class="col-md-12">
+        {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-secondary alert-dismissible fade show mt-3" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+        {% endif %}
+        <div class="card">
+          <div class="card-header" style="background: linear-gradient(90deg, white, #9bf8cd);">
+            <div class="row">
+              <div class="col-md-12">
+                <h3 class="mb-0 fw-bold">My Profile <a href="{% url 'password_change' %}" class="btn btn-secondary ms-3 my-auto float-end">Change Password</a></h3>
+              </div>
+            </div>
+          </div>
+          <div class="card-body">
+            {% if profile %}
+              <div class="row">
+                <div class="col-md-6">
+                  {% for user in profile.user.all %}
+                    <div class="mb-3">
+                      <p class="card-text"><strong>User:</strong> {{ user.username }}</p>
+                      <p class="card-text"><strong>First Name:</strong> {{ user.first_name }}</p>
+                      <p class="card-text"><strong>Last Name:</strong> {{ user.last_name }}</p>
+                      <p class="card-text"><strong>Email:</strong> {{ user.email }}</p>
+                    </div>
+                  {% endfor %}
+                </div>
+                <div class="col-md-6">
+                  <div class="mb-3">
+                    <p class="card-text"><strong>Bio:</strong> {{ profile.bio }}</p>
+                    <p class="card-text"><strong>Location:</strong> {{ profile.location }}</p>
+                    <p class="card-text"><strong>Phone Number:</strong> {{ profile.phone_no }}</p>
+                    <p class="card-text"><strong>Website:</strong> <a href="{{ profile.website }}">{{ profile.website }}</a></p>
+                  </div>
+                  <a href="{% url 'edit_profile' %}" class="btn btn-primary">Edit</a>
+                </div>
+              </div>
+            {% else %}
+              <p class="card-text">No profile found.</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}

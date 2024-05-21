@@ -14,16 +14,17 @@
         <div class="row justify-content-center">
             <div class="col-md-8">
                 <div class="card mt-5" style="box-shadow: 0 0 20px rgba(85, 144, 233, 1);"> <!-- Custom shadow -->
-                    <div class="card-body">
-                        <h2 class="card-title">Login</h2>
+                    <div class="card-body text-dark">
+                        <h2 class="card-title" style="font-weight: bold;">Login</h2>
                         {% if messages %}
                             {% for message in messages %}
-                                <div class="alert alert-success mt-3">
+                                <div class="alert alert-success alert-dismissible fade show mt-3" role="alert">
                                     {{ message }}
+                                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                                 </div>
                             {% endfor %}
                         {% endif %}
-                        <form method="post" action="{% url 'login' %}">
+                        <form method="post">
                             {% csrf_token %}
                             {% if form.non_field_errors %}
                             <div class="alert alert-danger mt-3">
@@ -49,7 +50,7 @@
                             </div>
                         </form>
                         <div class="mt-3">
-                            <p>Don't have an account? <a href="#">Sign up here</a></p>
+                            <p>Don't have an account? <a href="{% url 'signup' %}">Sign up here</a></p>
                         </div>
                     </div>
                 </div>

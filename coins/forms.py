@@ -1,5 +1,93 @@
 from django import forms
 from .models import *
+from django.contrib.auth.forms import UserCreationForm
+from django.contrib.auth.models import User
+from django.core.exceptions import ValidationError
+
+class EditUserProfileForm(forms.ModelForm):
+    username = forms.CharField(max_length=150, required=True)
+    first_name = forms.CharField(max_length=30, required=False)
+    last_name = forms.CharField(max_length=30, required=False)
+    email = forms.EmailField(required=True)
+    bio = forms.CharField(widget=forms.Textarea, required=False)
+    location = forms.CharField(max_length=100, required=False)
+    phone_no = forms.CharField(max_length=20, required=False)
+    website = forms.URLField(max_length=200, required=False)
+
+    class Meta:
+        model = Profile
+        fields = ['username', 'first_name', 'last_name', 'email', 'bio', 'location', 'phone_no', 'website']
+
+    def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
+        super().__init__(*args, **kwargs)
+        
+        if self.user:
+            self.fields['username'].initial = self.user.username
+            self.fields['first_name'].initial = self.user.first_name
+            self.fields['last_name'].initial = self.user.last_name
+            self.fields['email'].initial = self.user.email
+
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        # Check for other users with the same username
+        if User.objects.filter(username=username).count() > 0:
+            if self.user.username != username:
+                raise ValidationError("This username is already taken.")
+        return username
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        # Check for other users with the same email
+        if User.objects.filter(email=email).count() > 0:
+            if self.user.email != email:
+                raise ValidationError("This email is already taken.")
+        return email
+
+    def save(self, commit=True):
+        profile = super().save(commit=False)
+        user = self.user
+
+        user.username = self.cleaned_data['username']
+        user.first_name = self.cleaned_data['first_name']
+        user.last_name = self.cleaned_data['last_name']
+        user.email = self.cleaned_data['email']
+        
+        if commit:
+            user.save()
+            profile.save()
+        
+        return profile
+
+class SignUpForm(UserCreationForm):
+    email = forms.EmailField()
+
+    class Meta:
+        model = User
+        fields = ['username', 'email', 'password1', 'password2']
+
+    def clean_email(self):
+        email = self.cleaned_data['email']
+        if User.objects.filter(email=email).count() > 0:
+            raise forms.ValidationError("This email is already in use.")
+        return email
+
+    def clean_username(self):
+        username = self.cleaned_data['username']
+        if User.objects.filter(username=username).count() > 0:
+            raise forms.ValidationError("This username is already taken.")
+        return username
+
+    def save(self, commit=True):
+        user = super().save(commit=False)
+        user.email = self.cleaned_data['email']
+        if commit:
+            user.save()
+            # Create the Profile instance
+            profile = Profile.objects.create()
+            profile.user.add(user)
+            profile.save()
+        return user
 
 class UserValidationMixin:
     def clean_user(self):
