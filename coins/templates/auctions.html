@@ -54,8 +54,13 @@
                                 <div class="col-md-6 col-lg-6 col-xl-4">
                                     <div class="rounded position-relative fruite-item">
                                         <div class="fruite-img">
-                                            <a href="{% url 'coin-details' coin.id %}"><img src="{{ coin.coin_image.url }}"
-                                                class="img-fluid w-100 rounded-top" alt=""></a>
+                                            <a href="{% url 'coin-details' coin.id %}">
+                                                {% if coin.coin_image %}
+                                                <img src="{{ coin.coin_image.url }}" class="img-fluid w-100 rounded-top" alt="">
+                                                {% else %}
+                                                <img src="{% static 'img/default_image.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                                                {% endif %}
+                                            </a>
                                         </div>
                                         <div class="p-4 border-top-0 rounded-bottom">
                                             <h4>{{ coin.coin_name }}</h4>

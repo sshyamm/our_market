@@ -9,6 +9,35 @@ from django.contrib.auth import update_session_auth_hash
 from django.utils.decorators import method_decorator
 from django.urls import reverse_lazy
 from .forms import *
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+
+@login_required
+def create_coin(request):
+    if request.method == 'POST':
+        form = CoinWebForm(request.POST, request.FILES, user=request.user)  # Pass current user to form
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Coin created successfully!')
+            return redirect(reverse('coin-details', kwargs={'coin_id': form.instance.pk}))
+    else:
+        form = CoinWebForm(user=request.user)  # Pass current user to form
+    return render(request, 'create_coin.html', {'form': form})
+
+
+@login_required
+def dashboard(request):
+    coins_list = Coin.objects.all().order_by('-id')  # Use 'id' instead of 'coin_id'
+    paginator = Paginator(coins_list, 10)  # Change 10 to the desired number of items per page
+
+    page = request.GET.get('page')
+    try:
+        coins = paginator.page(page)
+    except PageNotAnInteger:
+        coins = paginator.page(1)
+    except EmptyPage:
+        coins = paginator.page(paginator.num_pages)
+
+    return render(request, 'dashboard.html', {'coins': coins})
 
 @login_required
 def view_profile(request):

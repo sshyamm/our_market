@@ -2,7 +2,25 @@ from django import forms
 from .models import *
 from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
+from django.utils.html import format_html
 from django.core.exceptions import ValidationError
+
+
+class CoinWebForm(forms.ModelForm):
+    def __init__(self, *args, **kwargs):
+        user = kwargs.pop('user', None)  # Remove 'user' from kwargs
+        super(CoinWebForm, self).__init__(*args, **kwargs)
+        if user:
+            self.fields['user'].initial = user  # Set initial value for 'user' field
+            # Hide the user field
+            self.fields['user'].widget.attrs['style'] = 'display: none;'
+            # Hide the user field's label
+            self.fields['user'].label = ''
+
+    class Meta:
+        model = Coin
+        fields = ['coin_image', 'coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'starting_bid', 'rate', 'coin_status', 'user']
+
 
 class EditUserProfileForm(forms.ModelForm):
     username = forms.CharField(max_length=150, required=True)

@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% load static %}
+{% load bootstrap4 %}
+{% block content %}
+<div class="container-fluid page-header py-5">
+    <h1 class="text-center text-white display-6">Dashboard</h1>
+    <ol class="breadcrumb justify-content-center mb-0">
+        <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item active text-white">Dashboard</li>
+    </ol>
+</div>
+<div class="container-fluid py-5">
+    <div class="container py-5">
+        <div class="row justify-content-center">
+            {% if user.is_authenticated and coins %}
+            <h1 class="text-center mb-4"><strong>Coins Table <a href="{% url 'create_coin' %}" class="btn btn-primary btn-sm">Create Coin</a></strong></h1>
+            <div class="table-responsive">
+                <table id="coins-table" class="table table-striped table-hover border border-2 text-center align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th onclick="sortTable(0)" style="cursor: pointer;">Name <span id="sort-icon-name" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(1)" style="cursor: pointer;">Image <span id="sort-icon-image" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(2)" style="cursor: pointer;">Description <span id="sort-icon-description" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(3)" style="cursor: pointer;">Year <span id="sort-icon-year" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(4)" style="cursor: pointer;">Country <span id="sort-icon-country" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(5)" style="cursor: pointer;">Material <span id="sort-icon-material" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(6)" style="cursor: pointer;">Weight <span id="sort-icon-weight" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(7)" style="cursor: pointer;">Rate <span id="sort-icon-rate" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(8)" style="cursor: pointer;">Starting Bid <span id="sort-icon-bid" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(9)" style="cursor: pointer;">Coin Status <span id="sort-icon-status" class="bi bi-sort-up"></span></th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody style="background: linear-gradient(90deg, white, #a8f7d2); font-weight: bold;" class="text-dark">
+                        {% for coin in coins %}
+                        <tr>
+                            <td>{{ coin.coin_name }}</td>
+                            <td>
+                                {% if coin.coin_image %}
+                                    <img src="{{ coin.coin_image.url }}" alt="{{ coin.coin_name }}" style="max-width: 100px;">
+                                {% else %}
+                                    No Image
+                                {% endif %}
+                            </td>
+                            <td>{{ coin.coin_desc }}</td>
+                            <td>{{ coin.coin_year }}</td>
+                            <td>{{ coin.coin_country }}</td>
+                            <td>{{ coin.coin_material }}</td>
+                            <td>{{ coin.coin_weight }}</td>
+                            <td>{{ coin.rate }}</td>
+                            <td>{{ coin.starting_bid }}</td>
+                            <td>{{ coin.coin_status }}</td>
+                            <td><a href="{% url 'coin-details' coin_id=coin.pk %}" class="btn btn-primary">View Details</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div class="d-flex justify-content-center mt-4">
+                <ul class="pagination" style="display: flex;">
+                    {% if coins.has_previous %}
+                        <li class="page-item"><a class="page-link" href="?page={{ coins.previous_page_number }}">&laquo;</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&laquo;</span></li>
+                    {% endif %}
+                    
+                    {% for i in coins.paginator.page_range %}
+                        {% if i == coins.number %}
+                            <li class="page-item active"><span class="page-link">{{ i }}</span></li>
+                        {% else %}
+                            <li class="page-item"><a class="page-link" href="?page={{ i }}">{{ i }}</a></li>
+                        {% endif %}
+                    {% endfor %}
+                    
+                    {% if coins.has_next %}
+                        <li class="page-item"><a class="page-link" href="?page={{ coins.next_page_number }}">&raquo;</a></li>
+                    {% else %}
+                        <li class="page-item disabled"><span class="page-link">&raquo;</span></li>
+                    {% endif %}
+                </ul>
+            </div>               
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock content %}
