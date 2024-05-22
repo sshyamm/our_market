@@ -23,6 +23,18 @@ def create_coin(request):
         form = CoinWebForm(user=request.user)  # Pass current user to form
     return render(request, 'create_coin.html', {'form': form})
 
+@login_required
+def edit_coin(request, coin_id):
+    coin = get_object_or_404(Coin, id=coin_id)
+    if request.method == 'POST':
+        form = CoinWebForm(request.POST, request.FILES, instance=coin, user=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Coin updated successfully!')
+            return redirect(reverse('coin-details', kwargs={'coin_id': coin.id}))
+    else:
+        form = CoinWebForm(instance=coin, user=request.user)
+    return render(request, 'edit_coin.html', {'form': form, 'coin': coin})
 
 @login_required
 def dashboard(request):

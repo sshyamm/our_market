@@ -12,10 +12,11 @@
   }
 </style>
 <div class="container-fluid page-header py-5 bg-primary">
-  <h1 class="text-center text-white display-6">Edit Your Details</h1>
+  <h1 class="text-center text-white display-6">Edit Your Coin</h1>
   <ol class="breadcrumb justify-content-center mb-0">
       <li class="breadcrumb-item"><a href="{% url 'home' %}" class="text-white">Home</a></li>
-      <li class="breadcrumb-item active text-white">Edit Your Details</li>
+      <li class="breadcrumb-item"><a href="{% url 'dashboard' %}" class="text-white">Dashboard</a></li>
+      <li class="breadcrumb-item active text-white">Edit Your Coin</li>
   </ol>
 </div>
 <div class="container mt-5">
@@ -23,10 +24,10 @@
     <div class="col-md-10">
       <div class="card mt-5">
         <div class="card-body">
-          <h3 class="card-title fw-bold">Edit Your Details 
-            <a href="{% url 'view_profile' %}" class="btn btn-warning float-end">Return</a>
+          <h3 class="card-title fw-bold">Edit Your Coin 
+            <a href="{% url 'dashboard' %}" class="btn btn-warning float-end">Return</a>
           </h3>
-          <form method="post">
+          <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             {% bootstrap_form form %}
             <button type="submit" class="btn btn-primary mt-3">Save changes</button>
