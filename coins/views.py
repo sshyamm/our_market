@@ -38,7 +38,40 @@ def edit_coin(request, coin_id):
 
 @login_required
 def dashboard(request):
-    coins_list = Coin.objects.all().order_by('-id')  # Use 'id' instead of 'coin_id'
+    search_params = {}
+    coins_list = Coin.objects.all().order_by('-id')  # Initialize coins_list here
+
+    if request.method == 'POST':
+        # Handle search functionality and store search history
+        for key in request.POST:
+            if key != 'csrfmiddlewaretoken':
+                value = request.POST[key]
+                if value:
+                    # Get the field object from the Coin model
+                    field_object = Coin._meta.get_field(key)
+                    # Check if the field is an integer or number field
+                    if isinstance(field_object, (models.IntegerField, models.DecimalField, models.FloatField)):
+                        try:
+                            # Convert the value to the appropriate type
+                            value = field_object.to_python(value)
+                            # For integer and number fields, perform exact match
+                            search_params[key] = value
+                        except ValueError:
+                            # Handle the case where the value cannot be converted to the appropriate type
+                            messages.error(request, f'Invalid value for {key}. Please enter a valid number.')
+                            return redirect('coins:home')
+                    else:
+                        # Use __icontains for partial matching for non-integer fields
+                        search_params[key + '__icontains'] = value
+                    
+                    # Save search history to the database
+                    search_history = SearchHistory.objects.create(search_text=f'{key.capitalize()}: {value}')
+                    search_history.user.add(request.user)  # Add the current user to the user field
+                    search_history.save()
+
+        # Filter coins based on search parameters
+        coins_list = coins_list.filter(**search_params)
+
     paginator = Paginator(coins_list, 10)  # Change 10 to the desired number of items per page
 
     page = request.GET.get('page')
@@ -49,7 +82,25 @@ def dashboard(request):
     except EmptyPage:
         coins = paginator.page(paginator.num_pages)
 
-    return render(request, 'dashboard.html', {'coins': coins})
+    # Retrieve search history for the current user
+    search_history = SearchHistory.objects.filter(user=request.user).order_by('-timestamp')
+
+    return render(request, 'dashboard.html', {'coins': coins, 'search_history': search_history})
+
+@login_required
+def clear_search_history(request, search_history_id):
+    # Retrieve the search history item to delete
+    search_history_item = get_object_or_404(SearchHistory, pk=search_history_id)
+
+    # Check if the search history item belongs to the current user
+    if request.user in search_history_item.user.all():
+        # Delete the search history item
+        search_history_item.delete()
+    else:
+        messages.error(request, 'You do not have permission to delete this search history item.')
+
+    # Redirect back to the dashboard page
+    return redirect('dashboard')
 
 @login_required
 def view_profile(request):

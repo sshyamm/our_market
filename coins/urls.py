@@ -12,6 +12,7 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='dashboard'),
     path('create-coin/', views.create_coin, name='create_coin'),
     path('edit-coin/<int:coin_id>/', views.edit_coin, name='edit_coin'),
+    path("clear-search-history/<int:search_history_id>/", views.clear_search_history, name="clear_search_history"),
     path('auctions/', views.auctions, name='auctions'),
     path('coin-details/<int:coin_id>/', views.coin_details, name='coin-details'),
     path('cart/', views.cart, name='cart'),
