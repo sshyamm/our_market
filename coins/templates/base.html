@@ -102,14 +102,21 @@
                     {% if user.is_authenticated %}
                     <a href="{% url 'cart' %}" class="position-relative me-4 my-auto">
                         <i class="fa fa-shopping-bag fa-2x text-blue"></i>
-                        <span
-                            class="position-absolute bg-secondary rounded-circle d-flex align-items-center justify-content-center text-dark px-1"
+                        <span class="position-absolute bg-secondary rounded-circle d-flex align-items-center justify-content-center text-dark px-1"
                             style="top: -5px; left: 15px; height: 20px; min-width: 20px;">3</span>
                     </a>
                     <a href="{% url 'view_profile' %}" class="my-auto">
                         <i class="fas fa-user fa-2x text-blue"></i>
                     </a>
-                    <a href="{% url 'logout' %}" class="btn btn-danger ms-3 my-auto">Logout</a>
+                    <button onclick="logout()" class="btn btn-danger ms-3 my-auto">Logout</button>
+                    <form id="logout-form" action="{% url 'logout' %}" method="POST" style="display: none;">
+                        {% csrf_token %}
+                    </form>
+                    <script>
+                        function logout() {
+                            document.getElementById('logout-form').submit();
+                        }
+                    </script>
                     {% else %}
                     <a href="{% url 'login' %}" class="btn btn-info ms-3 my-auto text-white">Login</a>
                     <a href="{% url 'signup' %}" class="btn btn-secondary ms-3 my-auto">Sign Up</a>

@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'coins',
     'bootstrap4',
+    'django_filters',
+
 ]
 
 MIDDLEWARE = [
