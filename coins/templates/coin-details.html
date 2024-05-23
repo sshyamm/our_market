@@ -42,26 +42,20 @@
                         <h4 class="fw-bold mb-3">{{ coin.coin_name }}</h4>
                         <h5 class="fw-bold mb-3">{{ coin.rate }} /-</h5>
                         <p class="mb-4">{{ coin.coin_desc }}</p>
-                        <div class="input-group quantity mb-5" style="width: 100px;">
-                            <div class="input-group-btn">
-                                <button class="btn btn-sm btn-minus rounded-circle bg-light border">
-                                    <i class="fa fa-minus"></i>
-                                </button>
-                            </div>
-                            <input type="text" class="form-control form-control-sm text-center border-0" value="1">
-                            <div class="input-group-btn">
-                                <button class="btn btn-sm btn-plus rounded-circle bg-light border">
-                                    <i class="fa fa-plus"></i>
-                                </button>
+                        <div class="text-left">
+                            <div class="btn-group">
+                                <form method="post" action="{% url 'add_to_cart' coin.id %}">
+                                    {% csrf_token %}
+                                    <button type="submit" class="btn border border-secondary rounded-pill px-4 py-2 mb-4 text-blue"><i
+                                            class="fa fa-shopping-bag me-2 text-primary"></i> Add to cart</button>
+                                </form><span>&nbsp;</span>
+                                {% if request.user in coin.user.all %}
+                                    <a href="{% url 'edit_coin' coin.id %}" class="btn border border-secondary rounded-pill px-4 py-2 mb-4 text-blue">
+                                        <i class="fa fa-edit me-2 text-primary"></i> Edit Coin
+                                    </a>
+                                {% endif %}
                             </div>
                         </div>
-                        <a href="#" class="btn border border-secondary rounded-pill px-4 py-2 mb-4 text-blue"><i
-                                class="fa fa-shopping-bag me-2 text-primary"></i> Add to cart</a>
-                        {% if request.user in coin.user.all %}
-                            <a href="{% url 'edit_coin' coin.id %}" class="btn border border-secondary rounded-pill px-4 py-2 mb-4 text-blue">
-                                <i class="fa fa-edit me-2 text-primary"></i> Edit Coin
-                            </a>
-                        {% endif %}
                     </div>
                     <div class="col-lg-12">
                         <nav>

@@ -10,6 +10,61 @@ from django.utils.decorators import method_decorator
 from django.urls import reverse_lazy
 from .forms import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.views.decorators.http import require_POST
+
+@login_required
+def add_to_cart(request, coin_id):
+    if request.method == 'POST':
+        # Get the selected coin
+        coin = get_object_or_404(Coin, pk=coin_id)
+        # Get the current user
+        user = request.user
+        # Create a CartItem object
+        cart_item = CartItem(quantity=1)
+        cart_item.coin.add(coin)  # Add the coin to the cart item
+        cart_item.user.add(user)  # Add the user to the cart item
+        cart_item.save()  # Save the cart item
+        # Redirect to the cart page
+        messages.success(request, 'Your item has been added to the cart!')
+        return redirect('cart')
+    else:
+        # Handle GET request (if needed)
+        pass
+    
+@login_required
+@require_POST
+def save_changes(request):
+    cart_items = CartItem.objects.filter(user=request.user)
+
+    for item in cart_items:
+        item_id = str(item.id)
+        new_quantity = request.POST.get(f'quantity_{item_id}')
+        
+        if new_quantity is not None:
+            try:
+                new_quantity = int(new_quantity)
+                if new_quantity > 0:
+                    item.quantity = new_quantity
+                    item.save()
+                    updated = True
+                else:
+                    item.delete()
+                    updated = True
+            except ValueError:
+                # Handle invalid input
+                pass
+    if updated:
+        messages.success(request, 'Cart updated successfully.')
+    else:
+        messages.warning(request, 'No changes were made to the cart.')
+    return redirect('cart')
+
+@login_required
+def remove_item(request, item_id):
+    item = get_object_or_404(CartItem, id=item_id)
+    item.delete()
+    messages.success(request, 'Item removed successfully!')
+    return redirect('cart')
 
 @login_required
 def create_coin(request):
@@ -187,8 +242,10 @@ def coin_details(request, coin_id):
     return render(request, 'coin-details.html', {'coin': coin, 'company': company})
 
 def cart(request):
-    company = Company.objects.first()
-    return render(request, 'cart.html', {'company': company})
+    user = request.user
+    cart_items = CartItem.objects.filter(user=user)
+    total_price = sum(item.price for item in cart_items)
+    return render(request, 'cart.html', {'cart_items': cart_items, 'total_price': total_price})
 
 def checkout(request):
     company = Company.objects.first()
