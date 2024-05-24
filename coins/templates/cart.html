@@ -21,10 +21,7 @@
         {% endfor %}
         {% endif %}
         {% if cart_items %}
-        <div class="text-center text-danger" style="font-weight: bold;" role="alert">
-            <marquee>PLEASE SAVE YOUR CHANGES BEFORE CHECKOUT</marquee>
-        </div><span>&nbsp;</span>
-        <form id="cartForm" action="{% url 'save_changes' %}" method="post">
+        <form id="cartForm">
             {% csrf_token %}
             <div class="table-responsive">
                 <table class="table text-dark" style="font-size: large;">
@@ -86,9 +83,6 @@
                     </tbody>
                 </table>
             </div>
-            <div class="mt-5 text-center">
-                <button class="btn btn-secondary btn-sm rounded-pill px-4 py-3 text-dark" type="submit">Save Changes</button>
-            </div>
         </form>
         <div class="row g-4 justify-content-end">
             <div class="col-8"></div>
@@ -117,38 +111,60 @@
         {% endif %}
     </div>
 </div>
+
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const cartTable = document.querySelector('table.table');
-        
-        cartTable.addEventListener('click', (event) => {
-            const target = event.target;
-    
-            if (target.closest('.btn-minus') || target.closest('.btn-plus')) {
-                event.preventDefault(); // Prevent form submission
-                
-                const row = target.closest('tr');
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+
+        document.querySelectorAll('.btn-minus, .btn-plus').forEach(button => {
+            button.addEventListener('click', event => {
+                const button = event.currentTarget;
+                const row = button.closest('tr');
                 const quantityInput = row.querySelector('.quantity-input');
-                let quantity = parseInt(quantityInput.value);
                 const rate = parseFloat(row.querySelector('.rate').dataset.rate);
-                const priceElement = row.querySelector('.price');
-    
-                quantityInput.value = quantity;
-                const newPrice = (rate * quantity).toFixed(2);
-                priceElement.textContent = `${newPrice}/-`;
-                priceElement.dataset.price = newPrice;
-    
-                updateTotalPrice();
-            }
+                let quantity = parseInt(quantityInput.value);
+
+                if (quantity === 0) {
+                    row.remove();
+                } else {
+                    quantityInput.value = quantity;
+                    const newPrice = (rate * quantity).toFixed(2);
+                    const priceElement = row.querySelector('.price');
+                    priceElement.textContent = `${newPrice} /-`;
+                    priceElement.dataset.price = newPrice;
+                }
+
+                const itemId = row.dataset.itemId;
+
+                fetch("{% url 'update_cart_item' %}", {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': csrfToken,
+                    },
+                    body: new URLSearchParams({
+                        item_id: itemId,
+                        quantity: quantity
+                    })
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.status === 'success' || data.status === 'deleted') {
+                        updateTotalPrice();
+                    } else {
+                        alert('There was an error updating the cart.');
+                    }
+                });
+            });
         });
-    
+
         const updateTotalPrice = () => {
             let total = 0;
             document.querySelectorAll('.price').forEach(priceElement => {
                 total += parseFloat(priceElement.dataset.price);
             });
             document.querySelectorAll('.total-price').forEach(totalElement => {
-                totalElement.textContent = `${total.toFixed(2)}/-`;
+                totalElement.textContent = `${total.toFixed(2)} /-`;
                 totalElement.dataset.totalPrice = total.toFixed(2);
             });
         };

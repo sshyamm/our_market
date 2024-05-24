@@ -31,33 +31,39 @@ def add_to_cart(request, coin_id):
         # Handle GET request (if needed)
         pass
     
+from django.http import JsonResponse
+
 @login_required
 @require_POST
-def save_changes(request):
-    cart_items = CartItem.objects.filter(user=request.user)
+def update_cart_item(request):
+    item_id = request.POST.get('item_id')
+    new_quantity = request.POST.get('quantity')
 
-    for item in cart_items:
-        item_id = str(item.id)
-        new_quantity = request.POST.get(f'quantity_{item_id}')
+    try:
+        cart_item = CartItem.objects.get(id=item_id, user=request.user)
+        new_quantity = int(new_quantity)
         
-        if new_quantity is not None:
-            try:
-                new_quantity = int(new_quantity)
-                if new_quantity > 0:
-                    item.quantity = new_quantity
-                    item.save()
-                    updated = True
-                else:
-                    item.delete()
-                    updated = True
-            except ValueError:
-                # Handle invalid input
-                pass
-    if updated:
-        messages.success(request, 'Cart updated successfully.')
-    else:
-        messages.warning(request, 'No changes were made to the cart.')
-    return redirect('cart')
+        if new_quantity > 0:
+            cart_item.quantity = new_quantity
+            cart_item.save()
+            response = {
+                'status': 'success',
+                'item_id': item_id,
+                'new_price': cart_item.coin.first().rate * new_quantity,
+                'total_price': sum(item.coin.first().rate * item.quantity for item in CartItem.objects.filter(user=request.user))
+            }
+        else:
+            cart_item.delete()
+            response = {
+                'status': 'deleted',
+                'item_id': item_id,
+                'total_price': sum(item.coin.first().rate * item.quantity for item in CartItem.objects.filter(user=request.user))
+            }
+    except (CartItem.DoesNotExist, ValueError):
+        response = {'status': 'error'}
+
+    return JsonResponse(response)
+
 
 @login_required
 def remove_item(request, item_id):
