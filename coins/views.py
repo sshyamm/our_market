@@ -13,6 +13,24 @@ from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
 
 @login_required
+def checkout_view(request):
+    if request.method == 'POST':
+        user = request.user
+        cart_items = CartItem.objects.filter(user=user)
+        total_price = sum(item.price for item in cart_items)
+
+        # Fetch all offers
+        all_offers = Offer.objects.all()
+
+        return render(request, 'checkout.html', {
+            'cart_items': cart_items,
+            'total_price': total_price,
+            'all_offers': all_offers,
+        })
+    else:
+        return redirect('cart')
+
+@login_required
 def add_to_cart(request, coin_id):
     if request.method == 'POST':
         # Get the selected coin
@@ -32,7 +50,7 @@ def add_to_cart(request, coin_id):
         pass
     
 from django.http import JsonResponse
-
+   
 @login_required
 @require_POST
 def update_cart_item(request):
@@ -252,10 +270,6 @@ def cart(request):
     cart_items = CartItem.objects.filter(user=user)
     total_price = sum(item.price for item in cart_items)
     return render(request, 'cart.html', {'cart_items': cart_items, 'total_price': total_price})
-
-def checkout(request):
-    company = Company.objects.first()
-    return render(request, 'checkout.html', {'company': company})
 
 def contact(request):
     company = Company.objects.first()

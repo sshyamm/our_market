@@ -34,7 +34,7 @@
                                 {% if coin.coin_image %}
                                     <img src="{{ coin.coin_image.url }}" class="img-fluid w-100 h-100 bg-secondary rounded" alt="{{ coin.coin_name }}">
                                 {% else %}
-                                    <img src="{% static 'img/default_image.jpg' %}" class="img-fluid w-100 h-100 bg-secondary rounded" alt="{{ coin.coin_name }}">
+                                    <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 h-100 bg-secondary rounded" alt="{{ coin.coin_name }}">
                                 {% endif %}
                                 <a href="{% url 'coin-details' coin.id %}" class="btn px-4 py-2 text-white rounded">{{ coin.coin_name }}</a>
                             </div>
@@ -67,7 +67,7 @@
                             {% if coin.coin_image %}
                                 <img src="{{ coin.coin_image.url }}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
                             {% else %}
-                                <img src="{% static 'img/default_image.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                                <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
                             {% endif %}
                         </a>
                     </div>
@@ -160,7 +160,7 @@
                                                 {% if coin.coin_image %}
                                                     <img src="{{ coin.coin_image.url }}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
                                                 {% else %}
-                                                    <img src="{% static 'img/default_image.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                                                    <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
                                                 {% endif %}
                                             </a>
                                         </div>

@@ -31,9 +31,9 @@
                         <div class="border rounded">
                             <a href="#">
                                 {% if coin.coin_image %}
-                                    <img src="{{ coin.coin_image.url }}" class="img-fluid rounded" alt="{{ coin.coin_name }}">
+                                    <img src="{{ coin.coin_image.url }}" class="img-fluid rounded" style="width: 100%;" alt="{{ coin.coin_name }}">
                                 {% else %}
-                                    <img src="{% static 'img/default_image.jpg' %}" class="img-fluid rounded" alt="{{ coin.coin_name }}">
+                                    <img src="{% static 'img/default.jpg' %}" class="img-fluid rounded" style="width: 100%;" alt="{{ coin.coin_name }}">
                                 {% endif %}
                             </a>
                         </div>

@@ -7,6 +7,7 @@
     <h1 class="text-center text-white display-6">Checkout</h1>
     <ol class="breadcrumb justify-content-center mb-0">
         <li class="breadcrumb-item"><a href="{% url 'home' %}">Home</a></li>
+        <li class="breadcrumb-item"><a href="{% url 'cart' %}">Cart</a></li>
         <li class="breadcrumb-item active text-white">Checkout</li>
     </ol>
 </div>
@@ -20,20 +21,6 @@
         <form action="#">
             <div class="row g-5">
                 <div class="col-md-12 col-lg-6 col-xl-7">
-                    <div class="row">
-                        <div class="col-md-12 col-lg-6">
-                            <div class="form-item w-100">
-                                <label class="form-label my-3">First Name<sup>*</sup></label>
-                                <input type="text" class="form-control">
-                            </div>
-                        </div>
-                        <div class="col-md-12 col-lg-6">
-                            <div class="form-item w-100">
-                                <label class="form-label my-3">Last Name<sup>*</sup></label>
-                                <input type="text" class="form-control">
-                            </div>
-                        </div>
-                    </div>
                     <div class="form-item">
                         <label class="form-label my-3">Address <sup>*</sup></label>
                         <input type="text" class="form-control" placeholder="House Number Street Name">
@@ -43,22 +30,21 @@
                         <input type="text" class="form-control">
                     </div>
                     <div class="form-item">
-                        <label class="form-label my-3">Country<sup>*</sup></label>
+                        <label class="form-label my-3">State<sup>*</sup></label>
                         <input type="text" class="form-control">
                     </div>
                     <div class="form-item">
                         <label class="form-label my-3">Postcode/Zip<sup>*</sup></label>
+                        <input type="number" class="form-control">
+                    </div>
+                    <div class="form-item">
+                        <label class="form-label my-3">Country<sup>*</sup></label>
                         <input type="text" class="form-control">
                     </div>
                     <div class="form-item">
-                        <label class="form-label my-3">Mobile<sup>*</sup></label>
-                        <input type="tel" class="form-control">
+                        <label class="form-label my-3">Phone Number<sup>*</sup></label>
+                        <input type="text" class="form-control">
                     </div>
-                    <div class="form-item">
-                        <label class="form-label my-3">Email Address<sup>*</sup></label>
-                        <input type="email" class="form-control">
-                    </div>
-                    <hr>
                 </div>
                 <div class="col-md-12 col-lg-6 col-xl-5">
                     <div class="table-responsive">
@@ -73,42 +59,25 @@
                                 </tr>
                             </thead>
                             <tbody>
+                                {% for item in cart_items %}
                                 <tr>
                                     <th scope="row">
                                         <div class="d-flex align-items-center mt-2">
-                                            <img src="{% static 'img/carousel_coin1.jpg' %}" class="img-fluid rounded-circle"
-                                                style="width: 90px; height: 90px;" alt="">
+                                            {% if item.coin.first.coin_image %}
+                                            <img src="{{ item.coin.first.coin_image.url }}" class="img-fluid rounded-circle"
+                                                style="width: 90px; height: 90px;" alt="{{ item.coin.first.coin_name }}">
+                                            {% else %}
+                                            <img src="{% static 'img/default.jpg' %}" class="img-fluid rounded-circle"
+                                                style="width: 90px; height: 90px;" alt="Default Image">
+                                            {% endif %}
                                         </div>
                                     </th>
-                                    <td class="py-5">Awesome Brocoli</td>
-                                    <td class="py-5">$69.00</td>
-                                    <td class="py-5">2</td>
-                                    <td class="py-5">$138.00</td>
+                                    <td class="py-5">{{ item.coin.first.coin_name }}</td>
+                                    <td class="py-5">{{ item.coin.first.rate }}</td>
+                                    <td class="py-5">{{ item.quantity }}</td>
+                                    <td class="py-5">{{ item.price }}</td>
                                 </tr>
-                                <tr>
-                                    <th scope="row">
-                                        <div class="d-flex align-items-center mt-2">
-                                            <img src="{% static 'img/carousel_coin2.jpg' %}" class="img-fluid rounded-circle"
-                                                style="width: 90px; height: 90px;" alt="">
-                                        </div>
-                                    </th>
-                                    <td class="py-5">Potatoes</td>
-                                    <td class="py-5">$69.00</td>
-                                    <td class="py-5">2</td>
-                                    <td class="py-5">$138.00</td>
-                                </tr>
-                                <tr>
-                                    <th scope="row">
-                                        <div class="d-flex align-items-center mt-2">
-                                            <img src="{% static 'img/carousel_coin1.jpg' %}" class="img-fluid rounded-circle"
-                                                style="width: 90px; height: 90px;" alt="">
-                                        </div>
-                                    </th>
-                                    <td class="py-5">Big Banana</td>
-                                    <td class="py-5">$69.00</td>
-                                    <td class="py-5">2</td>
-                                    <td class="py-5">$138.00</td>
-                                </tr>
+                                {% endfor %}
                                 <tr>
                                     <th scope="row">
                                     </th>
@@ -119,34 +88,34 @@
                                     </td>
                                     <td class="py-5">
                                         <div class="py-3 border-bottom border-top">
-                                            <p class="mb-0 text-dark">$414.00</p>
+                                            <p class="mb-0 text-dark">{{ total_price }}</p>
                                         </div>
                                     </td>
                                 </tr>
                                 <tr>
-                                    <th scope="row">
-                                    </th>
-                                    <td class="py-5">
-                                        <p class="mb-0 text-dark py-4">Shipping</p>
+                                    <th scope="row"></th>
+                                    <td class="py-5" colspan="4">
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <h3 class="mb-0 text-dark py-3"><span class="fw-bold">Offers</span></h3>
+                                            <button id="viewOffersBtn" class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#offersCollapse" aria-expanded="false" aria-controls="offersCollapse">
+                                                View Offers
+                                            </button>
+                                        </div>
+                                        <div class="collapse mt-3" id="offersCollapse">
+                                            <div class="card card-body">
+                                                <div class="form-check text-start">
+                                                    {% for offer in all_offers %}
+                                                    <div class="form-check text-start">
+                                                        <input type="checkbox" class="form-check-input bg-primary border-0" id="offer-{{ offer.id }}" name="selected_offers" value="{{ offer.id }}">
+                                                        <label class="form-check-label" for="offer-{{ offer.id }}">{{ offer.name }} - {{ offer.discount_percentage }}% off</label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                                <button id="applyOfferBtn" class="btn btn-secondary mt-3" type="button">Apply Offer</button>
+                                            </div>
+                                        </div>
                                     </td>
-                                    <td colspan="3" class="py-5">
-                                        <div class="form-check text-start">
-                                            <input type="checkbox" class="form-check-input bg-primary border-0"
-                                                id="Shipping-1" name="Shipping-1" value="Shipping">
-                                            <label class="form-check-label" for="Shipping-1">Free Shipping</label>
-                                        </div>
-                                        <div class="form-check text-start">
-                                            <input type="checkbox" class="form-check-input bg-primary border-0"
-                                                id="Shipping-2" name="Shipping-1" value="Shipping">
-                                            <label class="form-check-label" for="Shipping-2">Flat rate: $15.00</label>
-                                        </div>
-                                        <div class="form-check text-start">
-                                            <input type="checkbox" class="form-check-input bg-primary border-0"
-                                                id="Shipping-3" name="Shipping-1" value="Shipping">
-                                            <label class="form-check-label" for="Shipping-3">Local Pickup: $8.00</label>
-                                        </div>
-                                    </td>
-                                </tr>
+                                </tr>                                                                                                                         
                                 <tr>
                                     <th scope="row">
                                     </th>

@@ -21,7 +21,7 @@
         {% endfor %}
         {% endif %}
         {% if cart_items %}
-        <form id="cartForm">
+        <form action="{% url 'checkout' %}" method="post">
             {% csrf_token %}
             <div class="table-responsive">
                 <table class="table text-dark" style="font-size: large;">
@@ -44,7 +44,7 @@
                                     <img src="{{ item.coin.first.coin_image.url }}" class="img-fluid me-5 rounded-circle"
                                         style="width: 80px; height: 80px;" alt="{{ item.coin.first.coin_name }}">
                                     {% else %}
-                                    <img src="{% static 'img/default_image.jpg' %}" class="img-fluid me-5 rounded-circle"
+                                    <img src="{% static 'img/default.jpg' %}" class="img-fluid me-5 rounded-circle"
                                         style="width: 80px; height: 80px;" alt="Default Image">
                                     {% endif %}
                                 </div>
@@ -83,27 +83,28 @@
                     </tbody>
                 </table>
             </div>
-        </form>
-        <div class="row g-4 justify-content-end">
-            <div class="col-8"></div>
-            <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
-                <div class="bg-light rounded">
-                    <div class="p-4">
-                        <h1 class="display-6 mb-4">Cart <span class="fw-normal">Total</span></h1>
-                        <div class="d-flex justify-content-between mb-4">
-                            <h5 class="mb-0 me-4">Subtotal:</h5>
-                            <p class="mb-0 total-price" style="font-size: large;" data-total-price="{{ total_price }}">{{ total_price }} /-</p>
+        
+            <div class="row g-4 justify-content-end">
+                <div class="col-8"></div>
+                <div class="col-sm-8 col-md-7 col-lg-6 col-xl-4">
+                    <div class="bg-light rounded">
+                        <div class="p-4">
+                            <h1 class="display-6 mb-4">Cart <span class="fw-normal">Total</span></h1>
+                            <div class="d-flex justify-content-between mb-4">
+                                <h5 class="mb-0 me-4">Subtotal:</h5>
+                                <p class="mb-0 total-price" style="font-size: large;" data-total-price="{{ total_price }}">{{ total_price }} /-</p>
+                            </div>
                         </div>
+                        <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
+                            <h5 class="mb-0 ps-4 me-4">Total</h5>
+                            <h4 class="mb-0 pe-4 total-price display-6" data-total-price="{{ total_price }}">{{ total_price }} /-</h4>
+                        </div>
+                        <button class="btn border-secondary rounded-pill px-4 py-3 text-primary text-uppercase mb-4 ms-4"
+                            type="submit">Proceed Checkout</button>
                     </div>
-                    <div class="py-4 mb-4 border-top border-bottom d-flex justify-content-between">
-                        <h5 class="mb-0 ps-4 me-4">Total</h5>
-                        <h4 class="mb-0 pe-4 total-price display-6" data-total-price="{{ total_price }}">{{ total_price }} /-</h4>
-                    </div>
-                    <button class="btn border-secondary rounded-pill px-4 py-3 text-primary text-uppercase mb-4 ms-4"
-                        type="button">Proceed Checkout</button>
                 </div>
             </div>
-        </div>
+        </form>
         {% else %}
         <div class="alert alert-info" role="alert">
             There are no items in your shopping cart.
