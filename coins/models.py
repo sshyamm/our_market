@@ -21,7 +21,6 @@ class Coin(models.Model):
         ('pending', 'Pending'),
     )
 
-    coin_image = models.ImageField(upload_to='coin_images/', null=True, blank=True)   # Image field to store coin image
     coin_name = models.CharField(max_length=100, null=True, blank=True)  # Char field for coin name
     coin_desc = models.TextField(null=True, blank=True)  # Text field for coin description
     coin_year = models.IntegerField(null=True, blank=True)  # Integer field for coin year
@@ -31,11 +30,24 @@ class Coin(models.Model):
     starting_bid = models.FloatField(null=True, blank=True)
     rate = models.FloatField(null=True, blank=True)  # Float field for starting bid
     coin_status = models.CharField(max_length=50, choices=STATUS_CHOICES, null=True, blank=True)  # Char field with choices for coin status
-    user = models.ArrayReferenceField(to=User, null=True, blank=True)
+    user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return self.coin_name  # Return the coin name as its string representation
-        
+
+class CoinImage(models.Model):
+    ROOT_IMAGE_CHOICES = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
+
+    coin = models.ArrayReferenceField(to=Coin, null=True, blank=True, on_delete=models.CASCADE)
+    image = models.ImageField(upload_to='coin_images/', null=True, blank=True)
+    root_image = models.CharField(max_length=3, choices=ROOT_IMAGE_CHOICES, default='no')
+
+    def __str__(self):
+        return f"Coin: {self.coin.first()} on Root: {self.root_image}"
+           
 @receiver(post_save, sender=Coin)
 def update_related_calculations(sender, instance, **kwargs):
     if kwargs.get('created', False):  # Check if a new instance of Coin is created
@@ -51,14 +63,21 @@ def update_related_calculations(sender, instance, **kwargs):
             cart_item.save()
 
 class Profile(models.Model):
-    user = models.ArrayReferenceField(to=User, null=True, blank=True)
+    user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
     bio = models.TextField(max_length=500, null=True, blank=True)
     location = models.CharField(max_length=100, null=True, blank=True)
     phone_no = models.CharField(max_length=20, null=True, blank=True) 
     website = models.URLField(max_length=200, null=True, blank=True)
+
+    def __str__(self):
+        if self.user.count() > 0:  # Check if there are any referenced users
+            usernames = ', '.join([u.username for u in self.user.all()])
+            return f"{usernames}"
+        else:
+            return "Empty Profile"
         
 class SearchHistory(models.Model):
-    user = models.ArrayReferenceField(to=User,null=True, blank=True)
+    user = models.ArrayReferenceField(to=User,null=True, blank=True, on_delete=models.CASCADE)
     search_text = models.CharField(max_length=255, null=True, blank=True)
     timestamp = models.DateTimeField(auto_now_add=True,null=True, blank=True)
 
@@ -67,8 +86,8 @@ class SearchHistory(models.Model):
         return f"{user_str}"
 
 class CartItem(models.Model):
-    user = models.ArrayReferenceField(to=User, null=True, blank=True)
-    coin = models.ArrayReferenceField(to=Coin, null=True, blank=True)
+    user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
+    coin = models.ArrayReferenceField(to=Coin, null=True, blank=True, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(default=1, null=True, blank=True)
     price = models.FloatField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
@@ -98,7 +117,7 @@ class ShippingAddress(models.Model):
     postal_code = models.CharField(max_length=20, null=True, blank=True)
     country = CountryField()
     phone_no = models.CharField(max_length=20, null=True, blank=True) 
-    user = models.ArrayReferenceField(to=User, null=True, blank=True)
+    user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
 
     def __str__(self):
         return f"{self.address}, {self.city}, {self.state}, {self.postal_code}"
@@ -133,11 +152,11 @@ class Order(models.Model):
     )
 
     invoice_no = models.CharField(max_length=20, unique=True, null=True, blank=True, editable=False)
-    user = models.ArrayReferenceField(to=User, null=True, blank=True)
+    user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
     order_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
     shippingaddress = models.ArrayReferenceField(to=ShippingAddress, null=True, blank=True)
     status = models.CharField(max_length=20, choices=ORDER_STATUS_CHOICES, default='Pending', null=True, blank=True)
-    offer = models.ArrayReferenceField(to=Offer, null=True, blank=True)
+    offer = models.ArrayReferenceField(to=Offer, null=True, blank=True, on_delete=models.CASCADE)
 
     def save(self, *args, **kwargs):
         if not self.invoice_no:
@@ -311,7 +330,7 @@ def handle_offer_change(sender, instance, **kwargs):
 
 class OrderItem(models.Model):
     order = models.ArrayReferenceField(to=Order, null=True, blank=True, on_delete=models.CASCADE)
-    coin = models.ArrayReferenceField(to=Coin, null=True, blank=True)
+    coin = models.ArrayReferenceField(to=Coin, null=True, blank=True, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField(null=True, blank=True)
     price = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, editable=False)  # Add price field
 

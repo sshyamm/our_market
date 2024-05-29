@@ -4,6 +4,8 @@ from django.urls import reverse
 from .models import *
 from decimal import Decimal
 from coins.forms import *
+from django.shortcuts import redirect, get_object_or_404
+from django.http import HttpResponseRedirect
 
 def display_username(obj):
     if obj.user:
@@ -19,18 +21,64 @@ def display_coin(obj):
         return "None"
 
 def display_coin_image(obj):
-    if obj.coin_image:
-        return format_html('<img src="{}" style="max-width:100px; max-height:100px;">'.format(obj.coin_image.url))
+    if obj.image:
+        return format_html('<img src="{}" style="max-width:100px; max-height:100px;">'.format(obj.image.url))
     else:
         return "Null"
+        
 
 @admin.register(Coin)
 class CoinAdmin(admin.ModelAdmin):
-    list_display = ('coin_name', 'display_coin_image', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'rate', 'starting_bid', 'coin_status', display_username)
+    list_display = ('coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'rate', 'starting_bid', 'coin_status', display_username, 'view_images')
     form = CoinForm
 
-    def display_coin_image(self, obj):
-        return display_coin_image(obj)
+    def view_images(self, obj):
+        view_url = reverse('admin:coins_coinimage_changelist') + f'?coin__id__exact={obj.id}'
+        return format_html('<a href="{}">View Images</a>', view_url)
+
+    view_images.short_description = 'Images'
+
+@admin.register(CoinImage)
+class CoinImageAdmin(admin.ModelAdmin):
+    form = CoinImageForm
+    list_display = ('display_coin', display_coin_image, 'root_image')
+
+    def display_coin(self, obj):
+        return display_coin(obj.coin.first())
+
+    display_coin.short_description = 'Coin'
+
+    def add_view(self, request, form_url='', extra_context=None):
+        coin_id = request.GET.get('coin_id')
+        if coin_id:
+            coin = get_object_or_404(Coin, pk=coin_id)
+            request.POST = request.POST.copy()
+            request.POST['coin'] = coin.id
+        return super().add_view(request, form_url, extra_context)
+
+    def changelist_view(self, request, extra_context=None):
+        coin_id = request.GET.get('coin__id__exact')
+        if coin_id:
+            add_url = reverse('admin:coins_coinimage_add') + f'?coin_id={coin_id}'
+            if extra_context is None:
+                extra_context = {}
+            extra_context['add_url'] = add_url
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        coin_id = obj.coin.first().id
+        if "_continue" in request.POST:
+            return super().response_add(request, obj, post_url_continue)
+        return HttpResponseRedirect(reverse('admin:coins_coinimage_changelist') + f'?coin__id__exact={coin_id}')
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if 'coin' in form.base_fields:
+            form.base_fields['coin'].widget.attrs['style'] = 'display:none;'
+        return form
+    
+    def has_module_permission(self, request):
+        return False
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
@@ -73,16 +121,8 @@ class OrderAdmin(admin.ModelAdmin):
     get_shipping_address.short_description = 'Shipping Address'
 
     def view_order_items(self, obj):
-        return format_html('<a href="{}">View Order Items</a>', reverse('admin:%s_%s_changelist' % (OrderItem._meta.app_label, OrderItem._meta.model_name)) + f"?order__id__exact={obj.id}")
-
-    view_order_items.short_description = 'Order Items'
-
-    def change_view(self, request, object_id, form_url='', extra_context=None):
-        extra_context = extra_context or {}
-        if request.method == 'GET':
-            order_items_url = reverse('admin:%s_%s_changelist' % (OrderItem._meta.app_label, OrderItem._meta.model_name))
-            extra_context['order_items_url'] = f"{order_items_url}?order__id__exact={object_id}"
-        return super().change_view(request, object_id, form_url, extra_context=extra_context)
+        view_url = reverse('admin:coins_orderitem_changelist') + f'?order__id__exact={obj.id}'
+        return format_html('<a href="{}">View Orders</a>', view_url)
     
     def total_amount(self, obj):
         return obj.calculate_discounted_total_amount()
@@ -106,6 +146,35 @@ class OrderItemAdmin(admin.ModelAdmin):
     display_coin.short_description = 'Coin'
     get_invoice_no.short_description = 'Invoice No'
 
+    def add_view(self, request, form_url='', extra_context=None):
+        order_id = request.GET.get('order_id')
+        if order_id:
+            order = get_object_or_404(Order, pk=order_id)
+            request.POST = request.POST.copy()
+            request.POST['order'] = order.id
+        return super().add_view(request, form_url, extra_context)
+
+    def changelist_view(self, request, extra_context=None):
+        order_id = request.GET.get('order__id__exact')
+        if order_id:
+            add_url = reverse('admin:coins_orderitem_add') + f'?order_id={order_id}'
+            if extra_context is None:
+                extra_context = {}
+            extra_context['add_url'] = add_url
+        return super().changelist_view(request, extra_context=extra_context)
+
+    def response_add(self, request, obj, post_url_continue=None):
+        order_id = obj.order.first().id
+        if "_continue" in request.POST:
+            return super().response_add(request, obj, post_url_continue)
+        return HttpResponseRedirect(reverse('admin:coins_orderitem_changelist') + f'?order__id__exact={order_id}')
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if 'order' in form.base_fields:
+            form.base_fields['order'].widget.attrs['style'] = 'display:none;'
+        return form
+    
     def has_module_permission(self, request):
         return False
 

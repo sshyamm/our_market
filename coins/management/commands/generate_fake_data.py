@@ -1,6 +1,42 @@
 from django.core.management.base import BaseCommand
 from faker import Faker
 from coins.models import Coin
+
+class Command(BaseCommand):
+    help = 'Generate fake data for Coin model'
+
+    def handle(self, *args, **options):
+        fake = Faker()
+
+        # Predefined list of coin names
+        coin_names = [
+            "American Eagle", "Maple Leaf", "Krugerrand", "Sovereign", "Liberty Head",
+            "Buffalo Nickel", "Mercury Dime", "Morgan Dollar", "Peace Dollar", "Saint-Gaudens"
+        ]
+
+        for _ in range(10):
+            # Choose a random coin name from the predefined list
+            coin_name = fake.random_element(elements=coin_names).title()
+
+            # Create a Coin object with fake data
+            coin = Coin(
+                coin_name=coin_name,
+                coin_desc=fake.sentence(),
+                coin_year=fake.random_int(min=1800, max=2023),
+                coin_country=fake.country(),
+                coin_material=fake.word(),
+                rate=fake.random_number(digits=4),
+                coin_weight=fake.random_number(digits=2),
+                starting_bid=fake.random_number(digits=3),
+                coin_status=fake.random_element(elements=('available', 'sold', 'pending'))
+            )
+            coin.save()
+
+        self.stdout.write(self.style.SUCCESS('Successfully generated fake data'))
+
+'''from django.core.management.base import BaseCommand
+from faker import Faker
+from coins.models import Coin
 from django.core.files.base import ContentFile
 import requests
 import os
@@ -77,4 +113,4 @@ class Command(BaseCommand):
             coin.coin_image.save(os.path.basename(image_path), ContentFile(image_response.content), save=False)
             coin.save()
 
-        self.stdout.write(self.style.SUCCESS('Successfully generated fake data'))
+        self.stdout.write(self.style.SUCCESS('Successfully generated fake data'))'''

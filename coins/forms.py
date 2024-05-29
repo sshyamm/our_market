@@ -4,7 +4,19 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.utils.html import format_html
 from django.core.exceptions import ValidationError
- 
+
+class CoinImageForm(forms.ModelForm):
+    class Meta:
+        model = CoinImage
+        fields = ['coin', 'image', 'root_image']
+
+    def __init__(self, *args, **kwargs):
+        super(CoinImageForm, self).__init__(*args, **kwargs)
+        if 'coin' in self.fields:
+            self.fields['coin'].widget.attrs['style'] = 'display: none;'
+            self.fields['coin'].label = ''
+            self.fields['coin'].widget.can_add_related = False
+
 class CoinWebForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user', None)  # Remove 'user' from kwargs
@@ -18,8 +30,7 @@ class CoinWebForm(forms.ModelForm):
 
     class Meta:
         model = Coin
-        fields = ['coin_image', 'coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'starting_bid', 'rate', 'coin_status', 'user']
-
+        fields = ['coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'starting_bid', 'rate', 'coin_status', 'user']
 
 class EditUserProfileForm(forms.ModelForm):
     username = forms.CharField(max_length=150, required=True)
@@ -242,7 +253,14 @@ class ShippingAddressForm(UserValidationMixin, forms.ModelForm):
 class OrderItemForm(CoinValidationMixin, forms.ModelForm):
     class Meta:
         model = OrderItem
-        fields = '__all__'
+        fields = ['order', 'coin', 'quantity']
+
+    def __init__(self, *args, **kwargs):
+        super(OrderItemForm, self).__init__(*args, **kwargs)
+        if 'order' in self.fields:
+            self.fields['order'].widget.attrs['style'] = 'display: none;'
+            self.fields['order'].label = ''
+            self.fields['order'].widget.can_add_related = False
 
     def clean_order(self):
         orders = self.cleaned_data['order']
