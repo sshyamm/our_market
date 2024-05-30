@@ -50,13 +50,13 @@
                     </div>
                     <div class="col-lg-9">
                         <div class="row g-4 justify-content-center">
-                            {% for coin in coins %}
+                            {% for coin, root_image in coins_with_images %}
                                 <div class="col-md-6 col-lg-6 col-xl-4">
                                     <div class="rounded position-relative fruite-item">
                                         <div class="fruite-img">
                                             <a href="{% url 'coin-details' coin.id %}">
-                                                {% if coin.coin_image %}
-                                                <img src="{{ coin.coin_image.url }}" class="img-fluid w-100 rounded-top" alt="">
+                                                {% if root_image %}
+                                                <img src="{{ root_image.image.url }}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
                                                 {% else %}
                                                 <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
                                                 {% endif %}

@@ -30,8 +30,8 @@
                     <div class="col-lg-6">
                         <div class="border rounded">
                             <a href="#">
-                                {% if coin.coin_image %}
-                                    <img src="{{ coin.coin_image.url }}" class="img-fluid rounded" style="width: 100%;" alt="{{ coin.coin_name }}">
+                                {% if root_image %}
+                                    <img src="{{ root_image.image.url }}" class="img-fluid rounded" style="width: 100%;" alt="{{ coin.coin_name }}">
                                 {% else %}
                                     <img src="{% static 'img/default.jpg' %}" class="img-fluid rounded" style="width: 100%;" alt="{{ coin.coin_name }}">
                                 {% endif %}
@@ -134,6 +134,24 @@
                 </div>
             </div>
         </div>
+        {% if coin_images %}
+        <div class="container-fluid vesitable py-5">
+            <h1 class="mb-0">More Images</h1>
+            <div class="owl-carousel vegetable-carousel justify-content-center">
+                {% for image in coin_images %}
+                    <div class="rounded position-relative vesitable-item">
+                        <div class="vesitable-img">
+                            {% if root_image %}
+                                <img src="{{ image.image.url }}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                            {% else %}
+                                <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
     </div>
 </div>
 <!-- Single Product End -->

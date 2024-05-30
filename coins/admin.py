@@ -6,6 +6,7 @@ from decimal import Decimal
 from coins.forms import *
 from django.shortcuts import redirect, get_object_or_404
 from django.http import HttpResponseRedirect
+from django.templatetags.static import static
 
 def display_username(obj):
     if obj.user:
@@ -29,8 +30,23 @@ def display_coin_image(obj):
 
 @admin.register(Coin)
 class CoinAdmin(admin.ModelAdmin):
-    list_display = ('coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'rate', 'starting_bid', 'coin_status', display_username, 'view_images')
+    list_display = (
+        'coin_name', 'display_root_image', 'coin_desc', 'coin_year', 'coin_country', 
+        'coin_material', 'coin_weight', 'rate', 'starting_bid', 
+        'coin_status', display_username, 'view_images'
+    )
     form = CoinForm
+
+    def display_root_image(self, obj):
+        # Fetch the root image for the coin
+        root_image = CoinImage.objects.filter(coin=obj, root_image='yes').first()
+        if root_image and root_image.image:
+            return format_html('<img src="{}" style="max-width:100px; max-height:100px;">', root_image.image.url)
+        else:
+            default_image_url = static('img/default.jpg')
+            return format_html('<img src="{}" style="max-width:100px; max-height:100px;" alt="{}">', default_image_url, obj.coin_name)
+
+    display_root_image.short_description = 'Root Image'
 
     def view_images(self, obj):
         view_url = reverse('admin:coins_coinimage_changelist') + f'?coin__id__exact={obj.id}'

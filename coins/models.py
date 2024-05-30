@@ -47,6 +47,12 @@ class CoinImage(models.Model):
 
     def __str__(self):
         return f"Coin: {self.coin.first()} on Root: {self.root_image}"
+    
+    def clean(self):
+        # Check if more than one CoinImage is marked as root_image='yes' for the same Coin
+        if self.root_image == 'yes' and self.coin.first().coinimage_set.filter(root_image='yes').exclude(pk=self.pk).count() > 0:
+            raise ValidationError("Only one CoinImage can be marked as root_image='yes' for a Coin.")
+        super().clean()
            
 @receiver(post_save, sender=Coin)
 def update_related_calculations(sender, instance, **kwargs):

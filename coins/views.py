@@ -238,7 +238,14 @@ def custom_password_change_done(request):
 def home(request):
     coins = Coin.objects.all()  # Fetch all coins
     company = Company.objects.first()  # Fetch the first company record
-    return render(request, 'home.html', {'coins': coins, 'company': company})
+    
+    # Fetch the root images for each coin
+    coins_with_images = []
+    for coin in coins:
+        root_image = CoinImage.objects.filter(coin=coin, root_image='yes').first()
+        coins_with_images.append((coin, root_image))
+    
+    return render(request, 'home.html', {'coins_with_images': coins_with_images, 'company': company})
 
 def signup(request):
     if request.user.is_authenticated:
@@ -258,12 +265,29 @@ def signup(request):
 def auctions(request):
     coins = Coin.objects.all()  # Fetch all coins
     company = Company.objects.first()
-    return render(request, 'auctions.html', {'coins': coins, 'company': company})
+
+    coins_with_images = []
+    for coin in coins:
+        root_image = CoinImage.objects.filter(coin=coin, root_image='yes').first()
+        coins_with_images.append((coin, root_image))
+    return render(request, 'auctions.html', {'coins': coins, 'coins_with_images': coins_with_images, 'company': company})
 
 def coin_details(request, coin_id):
     coin = get_object_or_404(Coin, id=coin_id)
     company = Company.objects.first()
-    return render(request, 'coin-details.html', {'coin': coin, 'company': company})
+    
+    # Fetch the root image for the coin
+    root_image = CoinImage.objects.filter(coin=coin, root_image='yes').first()
+    
+    # Fetch all images for the coin
+    coin_images = CoinImage.objects.filter(coin=coin)
+    
+    return render(request, 'coin-details.html', {
+        'coin': coin,
+        'company': company,
+        'root_image': root_image,
+        'coin_images': coin_images
+    })
 
 def cart(request):
     user = request.user
