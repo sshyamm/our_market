@@ -20,17 +20,27 @@ class Coin(models.Model):
         ('sold', 'Sold'),
         ('pending', 'Pending'),
     )
+    FEATURED_CHOICES = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
+    DELETED_CHOICES = (
+        ('yes', 'Yes'),
+        ('no', 'No'),
+    )
 
-    coin_name = models.CharField(max_length=100, null=True, blank=True)  # Char field for coin name
-    coin_desc = models.TextField(null=True, blank=True)  # Text field for coin description
-    coin_year = models.IntegerField(null=True, blank=True)  # Integer field for coin year
-    coin_country = models.CharField(max_length=50, null=True, blank=True)  # Char field for coin country
-    coin_material = models.CharField(max_length=50, null=True, blank=True)  # Char field for coin material
-    coin_weight = models.FloatField(null=True, blank=True)  # Float field for coin weight
+    coin_name = models.CharField(max_length=100, null=True, blank=True)
+    coin_desc = models.TextField(null=True, blank=True)
+    coin_year = models.IntegerField(null=True, blank=True)
+    coin_country = models.CharField(max_length=50, null=True, blank=True)
+    coin_material = models.CharField(max_length=50, null=True, blank=True)
+    coin_weight = models.FloatField(null=True, blank=True)
     starting_bid = models.FloatField(null=True, blank=True)
-    rate = models.FloatField(null=True, blank=True)  # Float field for starting bid
-    coin_status = models.CharField(max_length=50, choices=STATUS_CHOICES, null=True, blank=True)  # Char field with choices for coin status
+    rate = models.FloatField(null=True, blank=True)
+    coin_status = models.CharField(max_length=50, choices=STATUS_CHOICES, null=True, blank=True)
+    featured_coin = models.CharField(max_length=3, choices=FEATURED_CHOICES, default='no')
     user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
+    is_deleted = models.CharField(max_length=3, choices=DELETED_CHOICES, default='no')
 
     def __str__(self):
         return self.coin_name  # Return the coin name as its string representation
@@ -71,7 +81,8 @@ def update_related_calculations(sender, instance, **kwargs):
 class Profile(models.Model):
     user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
     bio = models.TextField(max_length=500, null=True, blank=True)
-    location = models.CharField(max_length=100, null=True, blank=True)
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = CountryField()
     phone_no = models.CharField(max_length=20, null=True, blank=True) 
     website = models.URLField(max_length=200, null=True, blank=True)
 
@@ -121,7 +132,7 @@ class ShippingAddress(models.Model):
     city = models.CharField(max_length=100, null=True, blank=True)
     state = models.CharField(max_length=100, null=True, blank=True)
     postal_code = models.CharField(max_length=20, null=True, blank=True)
-    country = CountryField()
+    country = CountryField(null=True, blank=True)
     phone_no = models.CharField(max_length=20, null=True, blank=True) 
     user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
 
@@ -131,7 +142,6 @@ class ShippingAddress(models.Model):
 class Offer(models.Model):
     OFFER_TYPE_CHOICES = (
         ('TotalAmount', 'Total Amount Based'),
-        ('LocationBased', 'Location Based'),
         ('UserBased', 'User Based'),
     )
 
@@ -141,8 +151,6 @@ class Offer(models.Model):
     discount_percentage = models.DecimalField(max_digits=5, decimal_places=2)
     max_discount_percentage = models.DecimalField(max_digits=5, decimal_places=2, null=True, blank=True)
     num_orders = models.IntegerField(null=True, blank=True)
-    country = CountryField(null=True, blank=True)  # For location-based offers
-    state = models.CharField(max_length=20, null=True, blank=True) 
         
     def __str__(self):
         return f"{self.name} ---- {self.discount_percentage}%"
@@ -218,14 +226,6 @@ class Order(models.Model):
                     if discounted_total_amount >= min_order_amount_decimal:
                         discount_amount = (discounted_total_amount * decimal.Decimal(str(offer.discount_percentage))) / 100
                         discounted_total_amount -= discount_amount  # Apply discount
-                elif offer.offer_type == 'LocationBased':
-                    # Check if the order's shipping address matches the offer's country and state
-                    if self.shippingaddress and self.shippingaddress.first():
-                        order_country = self.shippingaddress.first().country
-                        order_state = self.shippingaddress.first().state.lower()
-                        if order_country == offer.country and order_state == offer.state.lower():
-                            discount_amount = (discounted_total_amount * decimal.Decimal(str(offer.discount_percentage))) / 100
-                            discounted_total_amount -= discount_amount  # Apply discount
                 elif offer.offer_type == 'UserBased':
                     if self.user.first() and self.is_user_based_offer_eligible(offer):
                         other_offer_discount = Decimal(0)
@@ -269,11 +269,6 @@ class Order(models.Model):
         if offer.offer_type == 'TotalAmount':
             min_order_amount_decimal = decimal.Decimal(str(offer.min_order_amount))
             return self.calculate_total_amount() >= min_order_amount_decimal
-        elif offer.offer_type == 'LocationBased':
-            if self.shippingaddress and self.shippingaddress.first():
-                order_country = self.shippingaddress.first().country
-                order_state = self.shippingaddress.first().state.lower()
-                return order_country == offer.country and order_state == offer.state.lower()
         elif offer.offer_type == 'UserBased':
             return self.is_user_based_offer_eligible(offer)
         return False

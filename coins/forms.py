@@ -4,6 +4,12 @@ from django.contrib.auth.forms import UserCreationForm
 from django.contrib.auth.models import User
 from django.utils.html import format_html
 from django.core.exceptions import ValidationError
+from django_countries.fields import CountryField
+
+class ShippingAddressWebForm(forms.ModelForm):
+    class Meta:
+        model = ShippingAddress
+        fields = ['address', 'city', 'state', 'postal_code', 'country', 'phone_no']
 
 class CoinImageForm(forms.ModelForm):
     class Meta:
@@ -30,7 +36,7 @@ class CoinWebForm(forms.ModelForm):
 
     class Meta:
         model = Coin
-        fields = ['coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'starting_bid', 'rate', 'coin_status', 'user']
+        fields = ['coin_name', 'coin_desc', 'coin_year', 'coin_country', 'coin_material', 'coin_weight', 'starting_bid', 'rate', 'coin_status', 'featured_coin', 'is_deleted', 'user']
 
 class EditUserProfileForm(forms.ModelForm):
     username = forms.CharField(max_length=150, required=True)
@@ -38,13 +44,14 @@ class EditUserProfileForm(forms.ModelForm):
     last_name = forms.CharField(max_length=30, required=False)
     email = forms.EmailField(required=True)
     bio = forms.CharField(widget=forms.Textarea, required=False)
-    location = forms.CharField(max_length=100, required=False)
+    state = forms.CharField(max_length=100, required=False)
+    country = CountryField(blank=True)  # Use blank=True to allow empty values
     phone_no = forms.CharField(max_length=20, required=False)
     website = forms.URLField(max_length=200, required=False)
 
     class Meta:
         model = Profile
-        fields = ['username', 'first_name', 'last_name', 'email', 'bio', 'location', 'phone_no', 'website']
+        fields = ['username', 'first_name', 'last_name', 'email', 'bio', 'state', 'country', 'phone_no', 'website']
 
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
@@ -163,7 +170,7 @@ class OrderForm(UserValidationMixin, forms.ModelForm):
                 else:
                     if other_offer_selected:
                         # Raise ValidationError if more than one non 'UserBased' offer is selected
-                        raise forms.ValidationError("Only one base offer (either 'TotalAmount' or 'LocationBased') can be selected.")
+                        raise forms.ValidationError("Only one base offer (either 'TotalAmount') can be selected.")
                     other_offer_selected = True
         
         order = self.instance  # Get the order instance
@@ -176,17 +183,6 @@ class OrderForm(UserValidationMixin, forms.ModelForm):
                     min_order_amount_decimal = offer.min_order_amount.to_decimal()  # Convert Decimal128 to Decimal
                     if calculated_total_amount < min_order_amount_decimal:
                         raise forms.ValidationError(f"The offer '{offer}' is not eligible because the order's total amount is less than the minimum order amount required for this offer.")
-                elif offer.offer_type == 'LocationBased':
-                    # Fetch necessary data for validation
-                    order_shipping_address = ShippingAddress.objects.filter(order=order).first()
-                    if not order_shipping_address:
-                        raise forms.ValidationError("Order does not have a shipping address.")
-                    
-                    order_country = order_shipping_address.country
-                    order_state = order_shipping_address.state.lower()
-                    
-                    if order_country != offer.country or order_state != offer.state.lower():
-                        raise forms.ValidationError(f"The offer '{offer}' is not eligible because the order's shipping address does not match the offer's location criteria.")
                 elif offer.offer_type == 'UserBased':
                     order_user = order.user.first()
                     if order_user:
@@ -221,8 +217,7 @@ class OrderForm(UserValidationMixin, forms.ModelForm):
                     user_based_offer = [o for o in selected_offers if o.offer_type == 'UserBased'][0]
                     if offer.discount_percentage.to_decimal() >= user_based_offer.max_discount_percentage.to_decimal():
                         raise forms.ValidationError(f"The discount percentage of '{offer}' cannot be greater than the maximum discount percentage allowed by the selected UserBased offer '{user_based_offer}'.")
-
-                    
+        
         return selected_offers
     
 class CoinForm(UserValidationMixin, forms.ModelForm):
@@ -285,20 +280,11 @@ class OfferForm(forms.ModelForm):
         max_discount_percentage = cleaned_data.get('max_discount_percentage')
 
         if offer_type == 'TotalAmount':
-            if cleaned_data.get('country') or cleaned_data.get('state') or max_discount_percentage or cleaned_data.get('num_orders'):
-                self.add_error('country', 'This field is not applicable for TotalAmount offers.')
-                self.add_error('state', 'This field is not applicable for TotalAmount offers.')
-                self.add_error('max_discount_percentage', 'This field is not applicable for TotalAmount offers.')
-                self.add_error('num_orders', 'This field is not applicable for TotalAmount offers.')
-        elif offer_type == 'LocationBased':
-            if cleaned_data.get('min_order_amount') or max_discount_percentage or cleaned_data.get('num_orders'):
-                self.add_error('min_order_amount', 'This field is not applicable for LocationBased offers.')
+            if max_discount_percentage or cleaned_data.get('num_orders'):
                 self.add_error('max_discount_percentage', 'This field is not applicable for TotalAmount offers.')
                 self.add_error('num_orders', 'This field is not applicable for TotalAmount offers.')
         elif offer_type == 'UserBased':
-            if cleaned_data.get('country') or cleaned_data.get('state') or cleaned_data.get('min_order_amount'):
-                self.add_error('country', 'This field is not applicable for UserBased offers.')
-                self.add_error('state', 'This field is not applicable for UserBased offers.')
+            if cleaned_data.get('min_order_amount'):
                 self.add_error('min_order_amount', 'This field is not applicable for UserBased offers.')
 
         if discount_percentage is not None and max_discount_percentage is not None:

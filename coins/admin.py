@@ -33,7 +33,7 @@ class CoinAdmin(admin.ModelAdmin):
     list_display = (
         'coin_name', 'display_root_image', 'coin_desc', 'coin_year', 'coin_country', 
         'coin_material', 'coin_weight', 'rate', 'starting_bid', 
-        'coin_status', display_username, 'view_images'
+        'coin_status', display_username, 'featured_coin', 'view_images', 'is_deleted'
     )
     form = CoinForm
 
@@ -98,7 +98,7 @@ class CoinImageAdmin(admin.ModelAdmin):
 
 @admin.register(Profile)
 class ProfileAdmin(admin.ModelAdmin):
-    list_display = (display_username, 'bio', 'location', 'phone_no', 'website')
+    list_display = (display_username, 'bio', 'state', 'country', 'phone_no', 'website')
     form = ProfileForm
 
 @admin.register(SearchHistory)
@@ -205,5 +205,5 @@ class CompanyAdmin(admin.ModelAdmin):
 
 @admin.register(Offer)
 class OfferAdmin(admin.ModelAdmin):
-    list_display = ('name', 'min_order_amount', 'discount_percentage')
+    list_display = ('name', 'offer_type', 'discount_percentage', 'min_order_amount', 'max_discount_percentage', 'num_orders', 'discount_percentage')
     form = OfferForm

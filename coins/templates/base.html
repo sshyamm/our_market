@@ -81,16 +81,17 @@
                 <div class="collapse navbar-collapse bg-white" id="navbarCollapse">
                     <div class="navbar-nav mx-auto">
                         <a href="{% url 'home' %}" class="nav-item nav-link active">Home</a>
-                        <a href="{% url 'auctions' %}" class="nav-item nav-link text-dark">Auctions</a>
-                        <a href="#" class="nav-item nav-link text-dark">My Orders</a>
-                        <a href="#" class="nav-item nav-link text-dark">Bid Now</a>
+                        <a href="{% url 'auctions' %}" class="nav-item nav-link text-blue">Auctions</a>
                         {% if user.is_authenticated %}
+                            <a href="{% url 'my_orders' %}" class="nav-item nav-link text-danger">My Orders</a>
+                        {% endif %}
+                        <a href="#" class="nav-item nav-link text-dark">Bid Now</a>
+                        {% if user.is_authenticated and user.is_superuser %}
                             <a href="{% url 'dashboard' %}" class="nav-item nav-link text-dark">Dashboard</a>
                             {% endif %}
                         <div class="nav-item dropdown">
                             <a href="#" class="nav-link dropdown-toggle" data-bs-toggle="dropdown">Others</a>
                             <div class="dropdown-menu m-0 bg-secondary rounded-0">
-                                <a href="{% url 'checkout' %}" class="dropdown-item">Checkout</a>
                                 <a href="{% url 'contact' %}" class="dropdown-item">Contact</a>
                                 <a href="{% url 'error' %}" class="dropdown-item">404 Page</a>
                             </div>

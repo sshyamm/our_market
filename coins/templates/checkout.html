@@ -11,133 +11,145 @@
         <li class="breadcrumb-item active text-white">Checkout</li>
     </ol>
 </div>
+<style>
+    .form-group label {
+        margin-bottom: 10px; 
+    }
+    .form-group input, textarea, select {
+        margin-bottom: 10px; 
+    }
+</style>
 <!-- Single Page Header End -->
-
 
 <!-- Checkout Page Start -->
 <div class="container-fluid py-5">
     <div class="container py-5">
-        <h1 class="mb-4">Billing details</h1>
-        <form action="#">
+        <h1 class="mb-4 text-center">Billing Details</h1>
+        <form id="checkoutForm" action="{% url 'place_order' %}" method="post">
+            {% csrf_token %}
+            <div id="alertContainer" class="mb-4"></div>
             <div class="row g-5">
-                <div class="col-md-12 col-lg-6 col-xl-7">
-                    <div class="form-item">
-                        <label class="form-label my-3">Address <sup>*</sup></label>
-                        <input type="text" class="form-control" placeholder="House Number Street Name">
-                    </div>
-                    <div class="form-item">
-                        <label class="form-label my-3">Town/City<sup>*</sup></label>
-                        <input type="text" class="form-control">
-                    </div>
-                    <div class="form-item">
-                        <label class="form-label my-3">State<sup>*</sup></label>
-                        <input type="text" class="form-control">
-                    </div>
-                    <div class="form-item">
-                        <label class="form-label my-3">Postcode/Zip<sup>*</sup></label>
-                        <input type="number" class="form-control">
-                    </div>
-                    <div class="form-item">
-                        <label class="form-label my-3">Country<sup>*</sup></label>
-                        <input type="text" class="form-control">
-                    </div>
-                    <div class="form-item">
-                        <label class="form-label my-3">Phone Number<sup>*</sup></label>
-                        <input type="text" class="form-control">
+                <div class="col-md-12 col-lg-6">
+                    <!-- Address Selection Card -->
+                    <div class="card border-0" style="box-shadow: 0px 0px 15px rgba(123, 229, 236, 0.6);">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4 text-blue"><i class="bi bi-geo-alt-fill me-2 text-primary"></i> Select Address</h5>
+                            <select class="form-select mb-4" id="selectAddressDropdown" name="selected_address">
+                                <option value="" selected>Select an existing address or add new address</option>
+                                {% for address in shipping_addresses %}
+                                <option value="{{ address.id }}">{{ address.address }}, {{ address.city }}, {{ address.state }}, {{ address.postal_code }}, {{ address.country }}, {{ address.phone_no }}</option>
+                                {% endfor %}
+                                <option value="new">Add a new address</option>
+                            </select>
+                            <!-- New Address Form -->
+                            <div id="newAddressForm" class="d-none">
+                                {% csrf_token %}
+                                {% bootstrap_form form %}
+                            </div>
+                            <div id="selectedAddressSection"></div>
+                        </div>
                     </div>
                 </div>
-                <div class="col-md-12 col-lg-6 col-xl-5">
-                    <div class="table-responsive">
-                        <table class="table">
-                            <thead>
-                                <tr>
-                                    <th scope="col">Products</th>
-                                    <th scope="col">Name</th>
-                                    <th scope="col">Price</th>
-                                    <th scope="col">Quantity</th>
-                                    <th scope="col">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for item in cart_items %}
-                                <tr>
-                                    <th scope="row">
-                                        <div class="d-flex align-items-center mt-2">
-                                            {% if item.coin.first.coin_image %}
-                                            <img src="{{ item.coin.first.coin_image.url }}" class="img-fluid rounded-circle"
-                                                style="width: 90px; height: 90px;" alt="{{ item.coin.first.coin_name }}">
+                <div class="col-md-12 col-lg-6">
+                    <!-- Order Summary Card -->
+                    <div class="card border-0" style="box-shadow: 0px 0px 10px rgb(156, 190, 5);">
+                        <div class="card-body">
+                            <h5 class="card-title mb-4 text-blue"><i class="bi bi-cart-fill me-2"></i> Order Summary</h5>
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th scope="col"><h6>Products</h6></th>
+                                            <th scope="col"><h6>Name</h6></th>
+                                            <th scope="col"><h6>Price</h6></th>
+                                            <th scope="col"><h6>Quantity</h6></th>
+                                            <th scope="col"><h6>Total</h6></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item, root_image in cart_items_with_images %}
+                                        <tr>
+                                            <th scope="row">
+                                                <div class="d-flex align-items-center mt-2">
+                                                    {% if root_image %}
+                                                    <img src="{{ root_image.image.url }}" class="img-fluid rounded-circle" style="width: 75px; height: 65px;" alt="{{ item.coin.first.coin_name }}">
+                                                    {% else %}
+                                                    <img src="{% static 'img/default.jpg' %}" class="img-fluid rounded-circle" style="width: 75px; height: 65px;" alt="Default Image">
+                                                    {% endif %}
+                                                </div>
+                                            </th>
+                                            <td class="py-5"><h5>{{ item.coin.first.coin_name }}</h5></td>
+                                            <td class="py-5"><h5>{{ item.coin.first.rate }}</h5></td>
+                                            <td class="py-5"><h5>{{ item.quantity }}</h5></td>
+                                            <td class="py-5"><h5>{{ item.price }}/-</h5></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Subtotal Section -->
+                            <div class="mt-4 p-4 bg-white rounded shadow-lg" style="background: linear-gradient(to top, #f8f9fa, #f0ee75);">
+                                <div class="d-flex justify-content-between">
+                                    <p class="mb-0 h4"><i class="bi bi-calculator me-2"></i>Subtotal:</p>
+                                    <p class="mb-0 h4">{{ total_price }}/-</p>
+                                </div>
+                            </div>
+                            <!-- Applied Offers section -->
+                            {% if eligible_offers %}
+                            <div class="mt-4">
+                                <h5 class="card-title mb-4 text-blue">
+                                    <i class="bi bi-gift-fill me-2"></i> Applied Offers
+                                </h5>
+                                <div class="card border-0 shadow-lg p-3">
+                                    {% for offer in eligible_offers %}
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center">
+                                            <i class="bi bi-tag-fill me-1 text-danger"></i>
+                                            <h5>{{ offer.name }}</h5>
+                                        </div>
+                                        <div class="d-flex align-items-center">
+                                            {% if offer.offer_type == 'UserBased' %}
+                                                {% if revised_discount_percentage %}
+                                                    <h5><i class="bi bi-dash"></i> {{ revised_discount_percentage }}% off <i class="bi bi-check-circle-fill text-success"></i></h5>
+                                                {% else %}
+                                                    <h5><i class="bi bi-dash"></i> {{ offer.discount_percentage }}% off <i class="bi bi-check-circle-fill text-success"></i></h5>
+                                                {% endif %}
                                             {% else %}
-                                            <img src="{% static 'img/default.jpg' %}" class="img-fluid rounded-circle"
-                                                style="width: 90px; height: 90px;" alt="Default Image">
+                                                <h5><i class="bi bi-dash"></i> {{ offer.discount_percentage }}% off <i class="bi bi-check-circle-fill text-success"></i></h5>
                                             {% endif %}
                                         </div>
-                                    </th>
-                                    <td class="py-5">{{ item.coin.first.coin_name }}</td>
-                                    <td class="py-5">{{ item.coin.first.rate }}</td>
-                                    <td class="py-5">{{ item.quantity }}</td>
-                                    <td class="py-5">{{ item.price }}</td>
-                                </tr>
-                                {% endfor %}
-                                <tr>
-                                    <th scope="row">
-                                    </th>
-                                    <td class="py-5"></td>
-                                    <td class="py-5"></td>
-                                    <td class="py-5">
-                                        <p class="mb-0 text-dark py-3">Subtotal</p>
-                                    </td>
-                                    <td class="py-5">
-                                        <div class="py-3 border-bottom border-top">
-                                            <p class="mb-0 text-dark">{{ total_price }}</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr>
-                                    <th scope="row"></th>
-                                    <td class="py-5" colspan="4">
-                                        <div class="d-flex justify-content-between align-items-center">
-                                            <h3 class="mb-0 text-dark py-3"><span class="fw-bold">Offers</span></h3>
-                                            <button id="viewOffersBtn" class="btn btn-primary" type="button" data-bs-toggle="collapse" data-bs-target="#offersCollapse" aria-expanded="false" aria-controls="offersCollapse">
-                                                View Offers
-                                            </button>
-                                        </div>
-                                        <div class="collapse mt-3" id="offersCollapse">
-                                            <div class="card card-body">
-                                                <div class="form-check text-start">
-                                                    {% for offer in all_offers %}
-                                                    <div class="form-check text-start">
-                                                        <input type="checkbox" class="form-check-input bg-primary border-0" id="offer-{{ offer.id }}" name="selected_offers" value="{{ offer.id }}">
-                                                        <label class="form-check-label" for="offer-{{ offer.id }}">{{ offer.name }} - {{ offer.discount_percentage }}% off</label>
-                                                    </div>
-                                                    {% endfor %}
-                                                </div>
-                                                <button id="applyOfferBtn" class="btn btn-secondary mt-3" type="button">Apply Offer</button>
-                                            </div>
-                                        </div>
-                                    </td>
-                                </tr>                                                                                                                         
-                                <tr>
-                                    <th scope="row">
-                                    </th>
-                                    <td class="py-5">
-                                        <p class="mb-0 text-dark text-uppercase py-3">TOTAL</p>
-                                    </td>
-                                    <td class="py-5"></td>
-                                    <td class="py-5"></td>
-                                    <td class="py-5">
-                                        <div class="py-3 border-bottom border-top">
-                                            <p class="mb-0 text-dark">$135.00</p>
-                                        </div>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div class="row g-4 text-center align-items-center justify-content-center pt-4">
-                        <button type="button"
-                            class="btn border-secondary py-3 px-4 text-uppercase w-100 text-primary">Place
-                            Order</button>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="mt-4">
+                                <h5 class="card-title mb-4 text-blue">
+                                    <i class="bi bi-info-circle-fill me-2 text-danger"></i> No Eligible Offers
+                                </h5>
+                            </div>
+                            {% endif %}
+                            <!-- Final Price Section -->
+                            <div class="mt-4">
+                                <h5 class="card-title mb-4 text-blue">
+                                    <i class="bi bi-cash me-2"></i> Order Total
+                                </h5>
+                                <div class="mt-4 p-4 bg-white rounded shadow-lg" style="background: linear-gradient(to top, #f8f9fa, #ccf3c2);">
+                                    <div class="d-flex justify-content-between">
+                                        <p class="mb-0 h4 display-6">Total</p>
+                                        <p class="mb-0 h4 display-6">{{ final_price }}/-</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% for offer in eligible_offers %}
+                            <input type="hidden" name="eligible_offers" value="{{ offer.id }}">
+                            {% endfor %}
+                            <div class=" text-center align-items-center justify-content-center pt-4">
+                                <button type="submit" class="btn border-secondary py-3 px-4 text-uppercase w-100 text-blue" onclick="return validateForm()">
+                                    <i class="bi bi-box-arrow-in-right me-2"></i>Place Order
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -145,4 +157,60 @@
     </div>
 </div>
 <!-- Checkout Page End -->
+<script>
+    function validateForm() {
+        const selectedAddressDropdown = document.getElementById('selectAddressDropdown');
+        const selectedAddressId = selectedAddressDropdown.value;
+
+        // If no address is selected or new address form is not filled
+        if (selectedAddressId === "" || (selectedAddressId === "new" && !isNewAddressFormFilled())) {
+            const alertContainer = document.getElementById('alertContainer');
+            alertContainer.innerHTML = `
+                <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                    <strong>Please select an existing address or fill out the new address form completely.</strong>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            return false;
+        }
+        return true;
+    }
+
+    function isNewAddressFormFilled() {
+        const newAddressFormFields = document.getElementById('newAddressForm').querySelectorAll('input[type=text], select');
+        for (let field of newAddressFormFields) {
+            if (field.value.trim() === "") {
+                return false;
+            }
+        }
+        return true;
+    }
+    document.getElementById('selectAddressDropdown').addEventListener('change', function() {
+        const newAddressForm = document.getElementById('newAddressForm');
+        if (this.value === 'new') {
+            newAddressForm.classList.remove('d-none');
+        } else {
+            newAddressForm.classList.add('d-none');
+        }
+    });
+
+    document.getElementById('selectAddressDropdown').addEventListener('change', function() {
+        const selectedAddressSection = document.getElementById('selectedAddressSection');
+        const selectedAddressId = this.value;
+
+        // If an existing address is selected
+        if (selectedAddressId !== 'new') {
+            const selectedAddress = this.options[this.selectedIndex].text;
+
+            // Update the selected address section with the selected address
+            selectedAddressSection.innerHTML = `
+                <h4>Selected Address</h4>
+                <p class="text-danger fw-bold">${selectedAddress}</p>
+            `;
+        } else {
+            // If the user chooses to add a new address, clear the selected address section
+            selectedAddressSection.innerHTML = '';
+        }
+    });
+</script>
 {% endblock content %}

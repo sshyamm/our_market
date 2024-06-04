@@ -67,10 +67,18 @@
                                             <p>{{ coin.coin_desc }}</p>
                                             <div class="d-flex justify-content-between flex-lg-wrap">
                                                 <p class="text-dark fs-5 fw-bold mb-0">{{ coin.rate }} /-</p>
-                                                <a href="#"
-                                                    class="btn border border-secondary rounded-pill px-3 text-blue"><i
-                                                        class="fa fa-shopping-bag me-2 text-blue"></i> Add to
-                                                    cart</a>
+                                                {% if request.user not in coin.user.all %}
+                                                <form method="post" action="{% url 'add_to_cart' coin.id %}">
+                                                    {% csrf_token %}
+                                                <button type="submit" class="btn border border-secondary rounded-pill px-3 text-blue">
+                                                    <i class="fa fa-shopping-bag me-2 text-blue"></i> Add to cart
+                                                </button>
+                                                </form>
+                                                {% else %}
+                                                <a href="{% url 'coin-details' coin.id %}" class="btn border border-secondary rounded-pill px-3 text-blue">
+                                                    <i class="fas fa-eye me-2 text-blue"></i></i> View Details
+                                                </a>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>

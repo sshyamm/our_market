@@ -12,8 +12,16 @@
 <div class="container-fluid py-5">
     <div class="container py-5">
         <div class="row justify-content-center">
+            {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-secondary alert-dismissible fade show mt-3" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+            {% endif %}
             {% if user.is_authenticated %}
-            {% if search_history%}
+            {% if search_history %}
             <div class="alert alert-info" role="alert">
                 <strong>Search History:</strong>
                 {% for item in search_history %}
@@ -80,19 +88,25 @@
                             <th onclick="sortTable(6)" style="cursor: pointer;">Weight <span id="sort-icon-weight" class="bi bi-sort-up"></span></th>
                             <th onclick="sortTable(7)" style="cursor: pointer;">Rate <span id="sort-icon-rate" class="bi bi-sort-up"></span></th>
                             <th onclick="sortTable(8)" style="cursor: pointer;">Starting Bid <span id="sort-icon-bid" class="bi bi-sort-up"></span></th>
-                            <th onclick="sortTable(9)" style="cursor: pointer;">Coin Status <span id="sort-icon-status" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(9)" style="cursor: pointer;">Featured Coin <span id="sort-icon-bid" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(10)" style="cursor: pointer;">Is Deleted <span id="sort-icon-bid" class="bi bi-sort-up"></span></th>
+                            <th onclick="sortTable(11)" style="cursor: pointer;">Coin Status <span id="sort-icon-status" class="bi bi-sort-up"></span></th>
                             <th>Action</th>
                         </tr>
                     </thead>
                     <tbody style="background: linear-gradient(90deg, white, #a8f7d2); font-weight: bold;" class="text-dark">
-                        {% for coin in coins %}
+                        {% for coin, root_image in coins_with_images %}
                         <tr>
-                            <td>{{ coin.coin_name }}</td>
                             <td>
-                                {% if coin.coin_image %}
-                                    <img src="{{ coin.coin_image.url }}" alt="{{ coin.coin_name }}" style="max-width: 100px;">
+                                <a href="{% url 'coin-details' coin_id=coin.pk %}" style="color: purple; font-weight: bold;">
+                                    {{ coin.coin_name }}
+                                </a>
+                            </td>
+                            <td>
+                                {% if root_image and root_image.image %}
+                                    <img src="{{ root_image.image.url }}" alt="{{ coin.coin_name }}" style="max-width: 100px;">
                                 {% else %}
-                                    No Image
+                                    <img src="{% static 'img/default.jpg' %}" style="max-width: 100px;" alt="{{ coin.coin_name }}">
                                 {% endif %}
                             </td>
                             <td>{{ coin.coin_desc }}</td>
@@ -102,8 +116,14 @@
                             <td>{{ coin.coin_weight }}</td>
                             <td>{{ coin.rate }}</td>
                             <td>{{ coin.starting_bid }}</td>
+                            <td>{{ coin.featured_coin }}</td>
+                            <td>{{ coin.is_deleted }}</td>
                             <td>{{ coin.coin_status }}</td>
-                            <td><a href="{% url 'coin-details' coin_id=coin.pk %}" class="btn btn-primary">View Details</a></td>
+                            <td>
+                                <a href="{% url 'soft_delete_coin' coin.pk %}" class="btn btn-danger btn-sm" title="Delete">
+                                    <i class="fas fa-trash-alt"></i>
+                                </a>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>

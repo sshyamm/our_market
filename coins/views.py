@@ -6,30 +6,195 @@ from .models import *
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.http import HttpResponseRedirect
 from django.utils.decorators import method_decorator
 from django.urls import reverse_lazy
 from .forms import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
+from decimal import Decimal
+from bson.decimal128 import create_decimal128_context
+import decimal
+from django.utils import timezone
+from bson.decimal128 import Decimal128
+
+@login_required
+def order_detail(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    company = Company.objects.first()
+    context = {
+        'order': order,
+        'order_items' : order_items,
+        'company' : company
+    }
+    return render(request, 'order_details.html', context)
+
+@login_required
+def my_orders(request):
+    orders = Order.objects.filter(user=request.user).order_by('-order_date')
+    
+    # Annotate each order with its discounted total amount
+    orders_with_amounts = []
+    for order in orders:
+        order.discounted_total_amount = order.calculate_discounted_total_amount()
+        orders_with_amounts.append(order)
+
+    return render(request, 'my_orders.html', {'orders': orders_with_amounts})
+
+
+def thankyou(request, order_id):
+    if request.session.get('order_placed') or request.GET.get('order_placed'):
+        order = get_object_or_404(Order, id=order_id)
+        context = {
+            'order': order,
+        }
+        request.session.pop('order_placed', None)
+        return render(request, 'thankyou.html', context)
+    else:
+        return redirect(reverse('home'))
+
+@login_required
+def place_order(request):
+    if request.method == 'POST':
+        selected_address_id = request.POST.get('selected_address')
+        eligible_offers_ids = request.POST.getlist('eligible_offers')
+        eligible_offers = Offer.objects.filter(id__in=eligible_offers_ids)
+
+        if selected_address_id == 'new':
+            # If a new address is submitted through the form
+            form = ShippingAddressForm(request.POST)
+            if form.is_valid():
+                # Save the new address
+                new_address = form.save(commit=False)
+                new_address.user.add(request.user)
+                new_address.save()
+            else:
+                # If form is not valid, handle the error or display a message
+                pass
+        else:
+            # If an existing address is selected from the dropdown
+            selected_address = ShippingAddress.objects.get(pk=selected_address_id)
+
+        # Create order with the address and eligible offers
+        order = Order.objects.create(status='Pending')
+        order.user.add(request.user)
+
+        if selected_address_id == 'new' and form.is_valid():
+            order.shippingaddress.add(new_address)
+        elif selected_address_id != 'new':
+            order.shippingaddress.add(selected_address)
+
+        for offer in eligible_offers:
+            order.offer.add(offer)
+
+        # Fetch all cart items for the current user
+        cart_items = CartItem.objects.filter(user=request.user)
+
+        # Create order items based on cart items
+        for cart_item in cart_items:
+            order_item = OrderItem()
+            order_item.order.add(order)
+            order_item.coin.add(*cart_item.coin.all())
+            order_item.quantity = cart_item.quantity
+            order_item.save()
+        cart_items.delete()
+        request.session['order_placed'] = True
+
+        # Redirect to the cart page
+        return HttpResponseRedirect(reverse('thankyou', kwargs={'order_id': order.id}))
+
+    # If the request method is not POST or if an error occurs, redirect back to the checkout page
+    return redirect('cart')
 
 @login_required
 def checkout_view(request):
+    user = request.user
     if request.method == 'POST':
-        user = request.user
         cart_items = CartItem.objects.filter(user=user)
-        total_price = sum(item.price for item in cart_items)
+        total_price = sum(Decimal(item.price) for item in cart_items)  # Convert prices to Decimal
 
-        # Fetch all offers
-        all_offers = Offer.objects.all()
+        cart_items_with_images = [
+            (item, CoinImage.objects.filter(coin=item.coin.first(), root_image='yes').first())
+            for item in cart_items
+        ]
 
+        shipping_addresses = ShippingAddress.objects.filter(user=user)
+
+        # Retrieve eligible offers
+        eligible_offers = {}
+        current_time = timezone.now()  # Get the current date and time
+
+        for offer in Offer.objects.all():
+            if (offer.offer_type == 'TotalAmount' and total_price >= Decimal(str(offer.min_order_amount))) or \
+            (offer.offer_type == 'UserBased'):
+                if offer.offer_type == 'UserBased':
+                    recent_order_with_user_based_offer = Order.objects.filter(
+                        user=user,
+                        offer__offer_type='UserBased',  # Filter by 'UserBased' offer type
+                        order_date__lt=current_time
+                    ).order_by('-order_date').first()
+
+                    if recent_order_with_user_based_offer:
+                        num_previous_orders = Order.objects.filter(
+                            user=user,
+                            order_date__gt=recent_order_with_user_based_offer.order_date,
+                            order_date__lt=current_time
+                        ).count()
+                    else:
+                        num_previous_orders = Order.objects.filter(
+                            user=user,
+                            order_date__lt=current_time
+                        ).count()
+
+                    if num_previous_orders >= offer.num_orders:
+                        offer_discount_percentage = Decimal(offer.discount_percentage.to_decimal())
+                        if (offer.offer_type not in eligible_offers) or (offer_discount_percentage > Decimal(eligible_offers[offer.offer_type].discount_percentage.to_decimal())):
+                            # Check if the 'TotalAmount' offer's discount percentage is less than or equal to the 'UserBased' offer's max_discount_percentage
+                            if 'TotalAmount' not in eligible_offers or eligible_offers['TotalAmount'].discount_percentage.to_decimal() < offer.max_discount_percentage.to_decimal():
+                                eligible_offers[offer.offer_type] = offer
+                else:
+                    offer_discount_percentage = Decimal(offer.discount_percentage.to_decimal())
+                    if (offer.offer_type not in eligible_offers) or (offer_discount_percentage > Decimal(eligible_offers[offer.offer_type].discount_percentage.to_decimal())):
+                        eligible_offers[offer.offer_type] = offer
+
+        # Apply eligible offers to total price
+        final_price = total_price
+        revised_discount_percentage = Decimal('0')  # Initialize revised discount percentage for UserBased offer
+        for offer in eligible_offers.values():
+            discount_percentage = Decimal(str(offer.discount_percentage))
+            if offer.offer_type == 'TotalAmount':
+                discount_amount = (final_price * discount_percentage) / Decimal('100')
+                final_price -= discount_amount
+            elif offer.offer_type == 'UserBased':
+                if 'TotalAmount' in eligible_offers:  # If both offer types are applied
+                    total_discount_percentage = discount_percentage + Decimal(eligible_offers['TotalAmount'].discount_percentage.to_decimal())
+                    max_discount_percentage = Decimal(eligible_offers['UserBased'].max_discount_percentage.to_decimal())
+                    if total_discount_percentage > max_discount_percentage:
+                        revised_discount_percentage = max_discount_percentage - Decimal(eligible_offers['TotalAmount'].discount_percentage.to_decimal())
+                else:
+                    discount_amount = (final_price * discount_percentage) / Decimal('100')
+                    final_price -= discount_amount
+
+        # Adjust final price if revised discount percentage is calculated
+        if revised_discount_percentage:
+            user_based_offer_discount = (final_price * revised_discount_percentage) / Decimal('100')
+            final_price -= user_based_offer_discount
+
+        form = ShippingAddressWebForm()
         return render(request, 'checkout.html', {
             'cart_items': cart_items,
-            'total_price': total_price,
-            'all_offers': all_offers,
+            'cart_items_with_images': cart_items_with_images,
+            'total_price': total_price.quantize(Decimal('0.01')),  # Pass original total price to the template
+            'final_price': final_price.quantize(Decimal('0.01')),  # Pass final price to the template
+            'shipping_addresses': shipping_addresses,
+            'eligible_offers': list(eligible_offers.values()),  # Pass eligible offers to the template
+            'revised_discount_percentage': revised_discount_percentage,
+            'form': form,
         })
     else:
         return redirect('cart')
-
+    
 @login_required
 def add_to_cart(request, coin_id):
     if request.method == 'POST':
@@ -37,13 +202,23 @@ def add_to_cart(request, coin_id):
         coin = get_object_or_404(Coin, pk=coin_id)
         # Get the current user
         user = request.user
-        # Create a CartItem object
-        cart_item = CartItem(quantity=1)
-        cart_item.coin.add(coin)  # Add the coin to the cart item
-        cart_item.user.add(user)  # Add the user to the cart item
-        cart_item.save()  # Save the cart item
+        
+        # Check if the coin is already in the user's cart
+        existing_cart_item = CartItem.objects.filter(coin=coin, user=user).first()
+        if existing_cart_item:
+            # If the coin is already in the cart, increase its quantity by 1
+            existing_cart_item.quantity += 1
+            existing_cart_item.save()
+            messages.success(request, f'Another {coin.coin_name} has been added to your cart!')
+        else:
+            # If the coin is not in the cart, create a new CartItem object
+            cart_item = CartItem(quantity=1)
+            cart_item.coin.add(coin)  # Add the coin to the cart item
+            cart_item.user.add(user)  # Add the user to the cart item
+            cart_item.save()  # Save the cart item
+            messages.success(request, 'Your item has been added to the cart!')
+        
         # Redirect to the cart page
-        messages.success(request, 'Your item has been added to the cart!')
         return redirect('cart')
     else:
         # Handle GET request (if needed)
@@ -82,13 +257,30 @@ def update_cart_item(request):
 
     return JsonResponse(response)
 
+@login_required
+@require_POST
+def remove_item(request, item_id):
+    try:
+        item = CartItem.objects.get(id=item_id, user=request.user)
+        item.delete()
+        response = {'status': 'success'}
+    except CartItem.DoesNotExist:
+        response = {'status': 'error', 'message': 'Item not found.'}
+    except Exception as e:
+        response = {'status': 'error', 'message': str(e)}
+
+    return JsonResponse(response)
 
 @login_required
-def remove_item(request, item_id):
-    item = get_object_or_404(CartItem, id=item_id)
-    item.delete()
-    messages.success(request, 'Item removed successfully!')
-    return redirect('cart')
+@require_POST
+def clear_cart(request):
+    try:
+        CartItem.objects.filter(user=request.user).delete()
+        response = {'status': 'success'}
+    except Exception as e:
+        response = {'status': 'error', 'message': str(e)}
+
+    return JsonResponse(response)
 
 @login_required
 def create_coin(request):
@@ -161,10 +353,23 @@ def dashboard(request):
     except EmptyPage:
         coins = paginator.page(paginator.num_pages)
 
+    coins_with_images = []
+    for coin in coins:
+        root_image = CoinImage.objects.filter(coin=coin, root_image='yes').first()
+        coins_with_images.append((coin, root_image))
+
     # Retrieve search history for the current user
     search_history = SearchHistory.objects.filter(user=request.user).order_by('-timestamp')
 
-    return render(request, 'dashboard.html', {'coins': coins, 'search_history': search_history})
+    return render(request, 'dashboard.html', {'coins_with_images': coins_with_images, 'coins': coins, 'search_history': search_history})
+
+@login_required
+def soft_delete_coin(request, coin_id):
+    coin = get_object_or_404(Coin, pk=coin_id)
+    coin.is_deleted = 'yes'
+    coin.save()
+    messages.success(request, f'{coin.coin_name} has been deleted.')
+    return redirect('dashboard')
 
 @login_required
 def clear_search_history(request, search_history_id):
@@ -184,7 +389,45 @@ def clear_search_history(request, search_history_id):
 @login_required
 def view_profile(request):
     profile = Profile.objects.filter(user=request.user).first()
-    return render(request, 'registration/profile.html', {'profile': profile})
+    shipping_addresses = ShippingAddress.objects.filter(user=request.user)
+    return render(request, 'registration/profile.html', {'profile': profile, 'shipping_addresses': shipping_addresses})
+
+@login_required
+def add_shipping_address(request):
+    if request.method == 'POST':
+        form = ShippingAddressWebForm(request.POST)
+        if form.is_valid():
+            shipping_address = form.save(commit=False)
+            shipping_address.user.add(request.user)  # Link the address to the current user
+            shipping_address.save()
+            messages.success(request, 'Shipping address added successfully.')
+            return redirect('view_profile')
+    else:
+        form = ShippingAddressWebForm()
+    return render(request, 'registration/edit_shipping_address.html', {'form': form})
+
+@login_required
+def edit_shipping_address(request, address_id):
+    shipping_address = ShippingAddress.objects.get(id=address_id, user=request.user)
+    if not shipping_address:
+        return redirect('add_shipping_address')
+
+    if request.method == 'POST':
+        form = ShippingAddressWebForm(request.POST, instance=shipping_address)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Shipping address updated successfully.')
+            return redirect('view_profile')
+    else:
+        form = ShippingAddressWebForm(instance=shipping_address)
+    return render(request, 'registration/edit_shipping_address.html', {'form': form})
+
+@login_required
+def delete_shipping_address(request, address_id):
+    shipping_address = get_object_or_404(ShippingAddress, id=address_id, user=request.user)
+    shipping_address.delete()
+    messages.success(request, 'Shipping address deleted successfully.')
+    return redirect('view_profile')
 
 @login_required
 def edit_profile(request):
@@ -236,7 +479,7 @@ def custom_password_change_done(request):
             
 # Create your views here.
 def home(request):
-    coins = Coin.objects.all()  # Fetch all coins
+    coins = Coin.objects.filter(is_deleted='no')  # Fetch all coins
     company = Company.objects.first()  # Fetch the first company record
     
     # Fetch the root images for each coin
@@ -263,7 +506,7 @@ def signup(request):
     return render(request, 'registration/signup.html', {'form': form, 'company': company})
 
 def auctions(request):
-    coins = Coin.objects.all()  # Fetch all coins
+    coins = Coin.objects.filter(is_deleted='no')   # Fetch all coins
     company = Company.objects.first()
 
     coins_with_images = []
@@ -293,7 +536,15 @@ def cart(request):
     user = request.user
     cart_items = CartItem.objects.filter(user=user)
     total_price = sum(item.price for item in cart_items)
-    return render(request, 'cart.html', {'cart_items': cart_items, 'total_price': total_price})
+
+    # Fetch the root images for each coin in the cart items
+    cart_items_with_images = []
+    for item in cart_items:
+        coin = item.coin.first()  # Get the coin associated with the cart item
+        root_image = CoinImage.objects.filter(coin=coin, root_image='yes').first()
+        cart_items_with_images.append((item, root_image))
+
+    return render(request, 'cart.html', {'cart_items': cart_items, 'cart_items_with_images': cart_items_with_images, 'total_price': total_price})
 
 def contact(request):
     company = Company.objects.first()

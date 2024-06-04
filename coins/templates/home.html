@@ -61,27 +61,38 @@
         <h1 class="mb-0">Featured/Ongoing Auctions</h1>
         <div class="owl-carousel vegetable-carousel justify-content-center">
             {% for coin, root_image in coins_with_images %}
-                <div class="rounded position-relative vesitable-item">
-                    <div class="vesitable-img">
-                        <a href="{% url 'coin-details' coin.id %}">
-                            {% if root_image %}
-                                <img src="{{ root_image.image.url }}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
-                            {% else %}
-                                <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
-                            {% endif %}
-                        </a>
-                    </div>
-                    <div class="p-4 rounded-bottom">
-                        <h4>{{ coin.coin_name }}</h4>
-                        <p>{{ coin.coin_desc }}</p>
-                        <div class="d-flex justify-content-between flex-lg-wrap">
-                            <p class="text-dark fs-5 fw-bold mb-0">{{ coin.rate }} /-</p>
-                            <a href="#" class="btn border border-secondary rounded-pill px-3 text-blue">
-                                <i class="fa fa-shopping-bag me-2 text-blue"></i> Add to cart
+                {% if coin.featured_coin == 'yes' %}
+                    <div class="rounded position-relative vesitable-item">
+                        <div class="vesitable-img">
+                            <a href="{% url 'coin-details' coin.id %}">
+                                {% if root_image %}
+                                    <img src="{{ root_image.image.url }}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                                {% else %}
+                                    <img src="{% static 'img/default.jpg' %}" class="img-fluid w-100 rounded-top" alt="{{ coin.coin_name }}">
+                                {% endif %}
                             </a>
                         </div>
+                        <div class="p-4 rounded-bottom">
+                            <h4>{{ coin.coin_name }}</h4>
+                            <p>{{ coin.coin_desc }}</p>
+                            <div class="d-flex justify-content-between flex-lg-wrap">
+                                <p class="text-dark fs-5 fw-bold mb-0">{{ coin.rate }} /-</p>
+                                {% if request.user not in coin.user.all %}
+                                <form method="post" action="{% url 'add_to_cart' coin.id %}">
+                                    {% csrf_token %}
+                                <button type="submit" class="btn border border-secondary rounded-pill px-3 text-blue">
+                                    <i class="fa fa-shopping-bag me-2 text-blue"></i> Add to cart
+                                </button>
+                                </form>
+                                {% else %}
+                                <a href="{% url 'coin-details' coin.id %}" class="btn border border-secondary rounded-pill px-3 text-blue">
+                                    <i class="fas fa-eye me-2 text-blue"></i></i> View Details
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                </div>
+                {% endif %}
             {% endfor %}
         </div>
     </div>
@@ -169,9 +180,18 @@
                                             <p>{{ coin.coin_desc }}</p>
                                             <div class="d-flex justify-content-between flex-lg-wrap">
                                                 <p class="text-dark fs-5 fw-bold mb-0">{{ coin.rate }} /-</p>
-                                                <a href="#" class="btn border border-secondary rounded-pill px-3 text-blue">
+                                                {% if request.user not in coin.user.all %}
+                                                <form method="post" action="{% url 'add_to_cart' coin.id %}">
+                                                    {% csrf_token %}
+                                                <button type="submit" class="btn border border-secondary rounded-pill px-3 text-blue">
                                                     <i class="fa fa-shopping-bag me-2 text-blue"></i> Add to cart
+                                                </button>
+                                                </form>
+                                                {% else %}
+                                                <a href="{% url 'coin-details' coin.id %}" class="btn border border-secondary rounded-pill px-3 text-blue">
+                                                    <i class="fas fa-eye me-2 text-blue"></i></i> View Details
                                                 </a>
+                                                {% endif %}
                                             </div>
                                         </div>
                                     </div>
