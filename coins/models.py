@@ -5,10 +5,11 @@ from django.core.exceptions import ValidationError
 from decimal import Decimal
 from bson.decimal128 import create_decimal128_context
 import decimal
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from django_countries.fields import CountryField
 from django.db import transaction
+from django.utils import timezone
 
 D128_CTX = create_decimal128_context()
 
@@ -108,7 +109,13 @@ class CartItem(models.Model):
     quantity = models.PositiveIntegerField(default=1, null=True, blank=True)
     price = models.FloatField(null=True, blank=True, editable=False)
     created_at = models.DateTimeField(auto_now_add=True, null=True, blank=True)
-    
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Store original field values for change tracking
+        for field in self._meta.fields:
+            setattr(self, f"_original_{field.name}", getattr(self, field.name))
+
     def calculate_price(self):
         if self.coin and self.coin.first():
             coin_rate = self.coin.first().rate
@@ -118,14 +125,94 @@ class CartItem(models.Model):
                 raise ValueError("Coin rate is not defined.")
         else:
             raise ValueError("Coin is not selected.")
-    
+
     def save(self, *args, **kwargs):
         self.calculate_price()  # Recalculate the price every time the object is saved
         super().save(*args, **kwargs)
-    
+
     def __str__(self):
         coin_str = ', '.join([str(c) for c in self.coin.all()])
         return f"{coin_str}"
+
+class CartItemLog(models.Model):
+    ACTION_CHOICES = (
+        ('create', 'Create'),
+        ('update', 'Update'),
+        ('delete', 'Delete'),
+    )
+
+    cart_item = models.ArrayReferenceField(to=CartItem, on_delete=models.SET_NULL, null=True)
+    user = models.ArrayReferenceField(to=User, on_delete=models.CASCADE, null=True, blank=True)
+    action = models.CharField(max_length=10, choices=ACTION_CHOICES)
+    timestamp = models.DateTimeField(default=timezone.now)
+    changes = models.JSONField(null=True, blank=True)  # To store the changes made
+
+    def __str__(self):
+        return f"{self.user.first()} - {self.action} - {self.timestamp}"
+
+
+@receiver(post_save, sender=CartItem)
+def log_cart_item_save(sender, instance, created, **kwargs):
+    action = 'create' if created else 'update'
+    changes = {}
+    
+    # Include the ID and username of the user
+    user_instance = instance.user.first() if instance.user.count() > 0 else None
+    if user_instance:
+        changes['user_id'] = str(user_instance.id)
+        changes['username'] = user_instance.username
+    
+    # Include the ID of the item
+    changes['item_id'] = str(instance.id)
+    
+    if not created:
+        # Identify changed fields
+        for field in instance._meta.fields:
+            field_name = field.name
+            if field_name != 'id':
+                old_value = getattr(instance, f"_original_{field_name}", None)
+                new_value = getattr(instance, field_name)
+                if old_value != new_value:
+                    changes[field_name] = {'old': old_value, 'new': new_value}
+    
+    cart_item_log = CartItemLog(
+        action=action,
+        changes=changes or {}  # Use an empty dictionary if changes is None
+    )
+    cart_item_log.save()
+    cart_item_log.cart_item.add(instance)
+
+    if user_instance:
+        cart_item_log.user.add(user_instance)
+    
+    # Store current field values for future comparisons
+    for field in instance._meta.fields:
+        setattr(instance, f"_original_{field.name}", getattr(instance, field.name))
+
+@receiver(post_delete, sender=CartItem)
+def log_cart_item_delete(sender, instance, **kwargs):
+    user_instance = instance.user.first() if instance.user.count() > 0 else None
+    changes = {'deleted_item': str(instance), 'deleted_item_id': str(instance.id)}  # Include the deleted item's ID
+    if user_instance:
+        changes['user_id'] = str(user_instance.id)
+        changes['username'] = user_instance.username
+    
+    cart_item_log = CartItemLog(
+        action='delete',
+        changes=changes
+    )
+    cart_item_log.save()
+    cart_item_log.cart_item.add(instance)
+    if user_instance:
+        cart_item_log.user.add(user_instance)
+
+class ShippingCharge(models.Model):
+    state = models.CharField(max_length=100, null=True, blank=True)
+    country = CountryField()
+    charge = models.DecimalField(max_digits=10, decimal_places=2)
+
+    def __str__(self):
+        return f"{self.country.name}, {self.state}: {self.charge}"
 
 class ShippingAddress(models.Model):
     address = models.CharField(max_length=255, null=True, blank=True)
@@ -136,6 +223,18 @@ class ShippingAddress(models.Model):
     phone_no = models.CharField(max_length=20, null=True, blank=True) 
     user = models.ArrayReferenceField(to=User, null=True, blank=True, on_delete=models.CASCADE)
 
+    def get_shipping_charge(self):
+        try:
+            shipping_charge = ShippingCharge.objects.get(state__iexact=self.state, country=self.country)
+        except ShippingCharge.DoesNotExist:
+            shipping_charge = None
+
+        if shipping_charge:
+            return shipping_charge.charge
+        else:
+            company = Company.objects.first()  # Assuming there is at least one company
+            return company.shipping_charge
+        
     def __str__(self):
         return f"{self.address}, {self.city}, {self.state}, {self.postal_code}"
 
@@ -187,7 +286,7 @@ class Order(models.Model):
         for order_item in order_items:
             # Convert Decimal128 to Decimal
             order_item_price_decimal = Decimal(str(order_item.price))
-            total_amount += order_item_price_decimal
+            total_amount += order_item_price_decimal        
         return total_amount
         
     def is_user_based_offer_eligible(self, offer):
@@ -243,6 +342,10 @@ class Order(models.Model):
 
                         discount_amount = (discounted_total_amount * decimal.Decimal(str(revised_discount_percentage))) / 100
                         discounted_total_amount -= discount_amount  # Apply discount
+        # Add shipping charge
+        if self.shippingaddress and self.shippingaddress.first():
+            shipping_charge = self.shippingaddress.first().get_shipping_charge()
+            discounted_total_amount += Decimal(str(shipping_charge))
 
         return discounted_total_amount.quantize(decimal.Decimal('0.01'))
 
@@ -362,6 +465,7 @@ class Company(models.Model):
     country = CountryField()
     email = models.EmailField(max_length=255)
     contact_no = models.CharField(max_length=20)
+    shipping_charge = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
     def __str__(self):
         return self.name

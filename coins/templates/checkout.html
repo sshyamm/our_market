@@ -11,14 +11,6 @@
         <li class="breadcrumb-item active text-white">Checkout</li>
     </ol>
 </div>
-<style>
-    .form-group label {
-        margin-bottom: 10px; 
-    }
-    .form-group input, textarea, select {
-        margin-bottom: 10px; 
-    }
-</style>
 <!-- Single Page Header End -->
 
 <!-- Checkout Page Start -->
@@ -27,26 +19,49 @@
         <h1 class="mb-4 text-center">Billing Details</h1>
         <form id="checkoutForm" action="{% url 'place_order' %}" method="post">
             {% csrf_token %}
-            <div id="alertContainer" class="mb-4"></div>
             <div class="row g-5">
                 <div class="col-md-12 col-lg-6">
-                    <!-- Address Selection Card -->
-                    <div class="card border-0" style="box-shadow: 0px 0px 15px rgba(123, 229, 236, 0.6);">
+                    <!-- Display Selected Shipping Address -->
+                    <div class="card border-0 mb-4" style="box-shadow: 0px 0px 10px rgb(156, 190, 5);">
                         <div class="card-body">
-                            <h5 class="card-title mb-4 text-blue"><i class="bi bi-geo-alt-fill me-2 text-primary"></i> Select Address</h5>
-                            <select class="form-select mb-4" id="selectAddressDropdown" name="selected_address">
-                                <option value="" selected>Select an existing address or add new address</option>
-                                {% for address in shipping_addresses %}
-                                <option value="{{ address.id }}">{{ address.address }}, {{ address.city }}, {{ address.state }}, {{ address.postal_code }}, {{ address.country }}, {{ address.phone_no }}</option>
-                                {% endfor %}
-                                <option value="new">Add a new address</option>
-                            </select>
-                            <!-- New Address Form -->
-                            <div id="newAddressForm" class="d-none">
-                                {% csrf_token %}
-                                {% bootstrap_form form %}
+                            <h5 class="card-title mb-4 text-blue"><i class="bi bi-house-fill me-2"></i> Selected Shipping Address</h5><a href="{% url 'select-shipping' %}" class="btn btn-danger btn-sm">Change</a>
+                            <hr>
+                            <div class="address-details">
+                                <p class="mb-2">
+                                    <i class="bi bi-person-fill me-2 text-success"></i>
+                                    <strong>Name:</strong> {{ shipping_address.user.first }} {{ shipping_address.user.last_name }}
+                                </p>
+                                <p class="mb-2">
+                                    <i class="bi bi-geo-alt-fill me-2 text-success"></i>
+                                    <strong>Address:</strong> {{ shipping_address.address }}
+                                </p>
+                                {% if shipping_address.address_line2 %}
+                                <p class="mb-2">
+                                    <i class="bi bi-geo-alt-fill me-2 text-success"></i>
+                                    {{ shipping_address.address_line2 }}
+                                </p>
+                                {% endif %}
+                                <p class="mb-2">
+                                    <i class="bi bi-building me-2 text-success"></i>
+                                    <strong>City:</strong> {{ shipping_address.city }}
+                                </p>
+                                <p class="mb-2">
+                                    <i class="bi bi-building me-2 text-success"></i>
+                                    <strong>State:</strong> {{ shipping_address.state }}
+                                </p>
+                                <p class="mb-2">
+                                    <i class="bi bi-globe me-2 text-success"></i>
+                                    <strong>Country:</strong> {{ shipping_address.country }}
+                                </p>
+                                <p class="mb-2">
+                                    <i class="bi bi-mailbox me-2 text-success"></i>
+                                    <strong>Postal Code:</strong> {{ shipping_address.postal_code }}
+                                </p>
+                                <p class="mb-2">
+                                    <i class="bi bi-telephone-fill me-2 text-success"></i>
+                                    <strong>Phone:</strong> {{ shipping_address.phone_no }}
+                                </p>
                             </div>
-                            <div id="selectedAddressSection"></div>
                         </div>
                     </div>
                 </div>
@@ -90,8 +105,12 @@
                             <!-- Subtotal Section -->
                             <div class="mt-4 p-4 bg-white rounded shadow-lg" style="background: linear-gradient(to top, #f8f9fa, #f0ee75);">
                                 <div class="d-flex justify-content-between">
-                                    <p class="mb-0 h4"><i class="bi bi-calculator me-2"></i>Subtotal:</p>
-                                    <p class="mb-0 h4">{{ total_price }}/-</p>
+                                    <p class="mb-0 h5"><i class="bi bi-calculator me-2"></i>Subtotal:</p>
+                                    <p class="mb-0 h5">{{ total_price }}/-</p>
+                                </div><span>&nbsp;</span>
+                                <div class="d-flex justify-content-between">
+                                    <p class="mb-0 h5"><i class="bi bi-box me-2"></i>Shipping Charges:</p>
+                                    <p class="mb-0 h5"><i class="bi bi-plus"></i> {{ applied_shipping_charge }}/-</p>
                                 </div>
                             </div>
                             <!-- Applied Offers section -->
@@ -144,6 +163,7 @@
                             {% for offer in eligible_offers %}
                             <input type="hidden" name="eligible_offers" value="{{ offer.id }}">
                             {% endfor %}
+                            <input type="hidden" name="selected_address_id" value="{{ shipping_address.id }}">
                             <div class=" text-center align-items-center justify-content-center pt-4">
                                 <button type="submit" class="btn border-secondary py-3 px-4 text-uppercase w-100 text-blue" onclick="return validateForm()">
                                     <i class="bi bi-box-arrow-in-right me-2"></i>Place Order
@@ -157,60 +177,4 @@
     </div>
 </div>
 <!-- Checkout Page End -->
-<script>
-    function validateForm() {
-        const selectedAddressDropdown = document.getElementById('selectAddressDropdown');
-        const selectedAddressId = selectedAddressDropdown.value;
-
-        // If no address is selected or new address form is not filled
-        if (selectedAddressId === "" || (selectedAddressId === "new" && !isNewAddressFormFilled())) {
-            const alertContainer = document.getElementById('alertContainer');
-            alertContainer.innerHTML = `
-                <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                    <strong>Please select an existing address or fill out the new address form completely.</strong>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            `;
-            return false;
-        }
-        return true;
-    }
-
-    function isNewAddressFormFilled() {
-        const newAddressFormFields = document.getElementById('newAddressForm').querySelectorAll('input[type=text], select');
-        for (let field of newAddressFormFields) {
-            if (field.value.trim() === "") {
-                return false;
-            }
-        }
-        return true;
-    }
-    document.getElementById('selectAddressDropdown').addEventListener('change', function() {
-        const newAddressForm = document.getElementById('newAddressForm');
-        if (this.value === 'new') {
-            newAddressForm.classList.remove('d-none');
-        } else {
-            newAddressForm.classList.add('d-none');
-        }
-    });
-
-    document.getElementById('selectAddressDropdown').addEventListener('change', function() {
-        const selectedAddressSection = document.getElementById('selectedAddressSection');
-        const selectedAddressId = this.value;
-
-        // If an existing address is selected
-        if (selectedAddressId !== 'new') {
-            const selectedAddress = this.options[this.selectedIndex].text;
-
-            // Update the selected address section with the selected address
-            selectedAddressSection.innerHTML = `
-                <h4>Selected Address</h4>
-                <p class="text-danger fw-bold">${selectedAddress}</p>
-            `;
-        } else {
-            // If the user chooses to add a new address, clear the selected address section
-            selectedAddressSection.innerHTML = '';
-        }
-    });
-</script>
 {% endblock content %}

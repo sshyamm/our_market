@@ -25,6 +25,7 @@ urlpatterns = [
     path('thankyou/<int:order_id>/', views.thankyou, name='thankyou'),
     path('my_orders/', views.my_orders, name='my_orders'),
     path('order/<int:order_id>/', views.order_detail, name='order_detail'),
+    path('select-shipping/', views.select_shipping, name='select-shipping'),
     path('auctions/', views.auctions, name='auctions'),
     path('coin-details/<int:coin_id>/', views.coin_details, name='coin-details'),
     path('cart/', views.cart, name='cart'),

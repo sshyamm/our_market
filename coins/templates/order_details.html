@@ -11,8 +11,8 @@
     </ol>
 </div>
 <div class="container py-5">
-    <div class="row">
-        <div class="col-lg-12">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
             <div style="box-shadow: 0 20px 27px 0 rgb(0 0 0 / 50%);position: relative;display: flex;flex-direction: column;min-width: 0;word-wrap: break-word;background-color: #fff;background-clip: border-box;border: 0 solid rgba(0,0,0,.125);border-radius: 1rem;" class="card">
                 <div class="card-body">
                     <div class="invoice-title">
@@ -97,6 +97,11 @@
                                     <tr>
                                         <th scope="row" colspan="4" class="text-end">Sub Total</th>
                                         <td class="text-end text-dark"><span>&#8377;</span> {{ order.calculate_total_amount }}</td>
+                                    </tr>
+                                    <!-- end tr -->
+                                    <tr>
+                                        <th scope="row" colspan="4" class="text-end">Shipping Charges</th>
+                                        <td class="text-end text-dark"><span>&#8377;</span> {{ shipping_address.get_shipping_charge }}</td>
                                     </tr>
                                     <!-- end tr -->
                                     {% for offer in order.offer.all %}

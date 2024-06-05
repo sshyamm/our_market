@@ -22,7 +22,7 @@
         {% endif %}
         <div id="cart-container">
             {% if cart_items %}
-            <form action="{% url 'checkout' %}" method="post">
+            <form action="{% url 'select-shipping' %}" method="post">
                 {% csrf_token %}
                 <div class="table-responsive">
                     <table class="table text-dark" style="font-size: large;">

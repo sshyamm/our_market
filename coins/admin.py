@@ -201,9 +201,26 @@ class ShippingAddressAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ('name', 'address', 'city', 'state', 'postal_code', 'country', 'email', 'contact_no')
+    list_display = ('name', 'address', 'city', 'state', 'postal_code', 'country', 'email', 'contact_no', 'shipping_charge')
 
 @admin.register(Offer)
 class OfferAdmin(admin.ModelAdmin):
     list_display = ('name', 'offer_type', 'discount_percentage', 'min_order_amount', 'max_discount_percentage', 'num_orders', 'discount_percentage')
     form = OfferForm
+
+@admin.register(ShippingCharge)
+class ShippingChargeAdmin(admin.ModelAdmin):
+    list_display = ('state', 'country', 'charge')
+
+@admin.register(CartItemLog)
+class CartItemLogAdmin(admin.ModelAdmin):
+    list_display = ('get_cart', display_username, 'action', 'timestamp', 'changes')
+
+    def get_cart(self, obj):
+        cart = obj.cart_item.first()
+        if cart:
+            coin = cart.coin.first()  # Assuming coin is an ArrayReferenceField containing one item
+            if coin:
+                return coin.coin_name
+        return "None"
+    get_cart.short_description = 'Cart Coin Name'

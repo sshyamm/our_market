@@ -19,14 +19,29 @@ from django.utils import timezone
 from bson.decimal128 import Decimal128
 
 @login_required
+def select_shipping(request):
+    user = request.user
+    shipping_addresses = ShippingAddress.objects.filter(user=user)
+    
+    form = ShippingAddressWebForm()
+
+    return render(request, 'select_shipping.html', {
+        'shipping_addresses': shipping_addresses,
+        'form': form,
+    })
+
+@login_required
 def order_detail(request, order_id):
     order = get_object_or_404(Order, id=order_id)
     order_items = OrderItem.objects.filter(order=order)
     company = Company.objects.first()
+    shipping_address = order.shippingaddress.first
+
     context = {
         'order': order,
-        'order_items' : order_items,
-        'company' : company
+        'order_items': order_items,
+        'company': company,
+        'shipping_address': shipping_address
     }
     return render(request, 'order_details.html', context)
 
@@ -57,33 +72,16 @@ def thankyou(request, order_id):
 @login_required
 def place_order(request):
     if request.method == 'POST':
-        selected_address_id = request.POST.get('selected_address')
+        selected_address_id = request.POST.get('selected_address_id')
         eligible_offers_ids = request.POST.getlist('eligible_offers')
         eligible_offers = Offer.objects.filter(id__in=eligible_offers_ids)
-
-        if selected_address_id == 'new':
-            # If a new address is submitted through the form
-            form = ShippingAddressForm(request.POST)
-            if form.is_valid():
-                # Save the new address
-                new_address = form.save(commit=False)
-                new_address.user.add(request.user)
-                new_address.save()
-            else:
-                # If form is not valid, handle the error or display a message
-                pass
-        else:
-            # If an existing address is selected from the dropdown
-            selected_address = ShippingAddress.objects.get(pk=selected_address_id)
+            
+        selected_address = ShippingAddress.objects.get(pk=selected_address_id)
 
         # Create order with the address and eligible offers
         order = Order.objects.create(status='Pending')
         order.user.add(request.user)
-
-        if selected_address_id == 'new' and form.is_valid():
-            order.shippingaddress.add(new_address)
-        elif selected_address_id != 'new':
-            order.shippingaddress.add(selected_address)
+        order.shippingaddress.add(selected_address)
 
         for offer in eligible_offers:
             order.offer.add(offer)
@@ -111,6 +109,30 @@ def place_order(request):
 def checkout_view(request):
     user = request.user
     if request.method == 'POST':
+        selected_address_id = request.POST.get('selected_address_id')
+        if selected_address_id :
+            address_id = request.POST.get('selected_address_id')
+        else :
+            form = ShippingAddressWebForm(request.POST)
+            if form.is_valid():
+                shipping = form.save(commit=False)
+                shipping.user.add(request.user)  # Link the address to the current user
+                shipping.save()
+                address_id = shipping.id
+        
+        shipping_address = get_object_or_404(ShippingAddress, id=address_id, user=user)
+        
+        # Retrieve shipping charge based on address state and country
+        shipping_charge = None
+        try:
+            shipping_charge = ShippingCharge.objects.get(state__iexact=shipping_address.state, country=shipping_address.country)
+        except ShippingCharge.DoesNotExist:
+            # Apply default shipping charge from the Company model
+            company = Company.objects.first()  # Assuming there is only one company record
+            default_shipping_charge = company.shipping_charge
+            # Convert Decimal128 to Decimal
+            default_shipping_charge = default_shipping_charge.to_decimal()
+
         cart_items = CartItem.objects.filter(user=user)
         total_price = sum(Decimal(item.price) for item in cart_items)  # Convert prices to Decimal
 
@@ -118,8 +140,6 @@ def checkout_view(request):
             (item, CoinImage.objects.filter(coin=item.coin.first(), root_image='yes').first())
             for item in cart_items
         ]
-
-        shipping_addresses = ShippingAddress.objects.filter(user=user)
 
         # Retrieve eligible offers
         eligible_offers = {}
@@ -181,16 +201,22 @@ def checkout_view(request):
             user_based_offer_discount = (final_price * revised_discount_percentage) / Decimal('100')
             final_price -= user_based_offer_discount
 
-        form = ShippingAddressWebForm()
+        # Apply shipping charge to the total price
+        if shipping_charge:
+            shipping_charge_decimal = shipping_charge.charge.to_decimal()
+            final_price += shipping_charge_decimal
+        else:
+            final_price += default_shipping_charge
+
         return render(request, 'checkout.html', {
             'cart_items': cart_items,
             'cart_items_with_images': cart_items_with_images,
             'total_price': total_price.quantize(Decimal('0.01')),  # Pass original total price to the template
             'final_price': final_price.quantize(Decimal('0.01')),  # Pass final price to the template
-            'shipping_addresses': shipping_addresses,
+            'shipping_address': shipping_address,
             'eligible_offers': list(eligible_offers.values()),  # Pass eligible offers to the template
             'revised_discount_percentage': revised_discount_percentage,
-            'form': form,
+            'applied_shipping_charge': shipping_charge_decimal if shipping_charge else default_shipping_charge,
         })
     else:
         return redirect('cart')
@@ -221,8 +247,7 @@ def add_to_cart(request, coin_id):
         # Redirect to the cart page
         return redirect('cart')
     else:
-        # Handle GET request (if needed)
-        pass
+        return redirect('cart')
     
 from django.http import JsonResponse
    
