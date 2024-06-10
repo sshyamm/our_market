@@ -121,6 +121,9 @@ class CartItemAdmin(admin.ModelAdmin):
 class OrderAdmin(admin.ModelAdmin):
     list_display = ('invoice_no', display_username, 'order_date', 'get_shipping_address', 'status', 'get_offer', 'view_order_items', 'total_amount')
     form = OrderForm
+    search_fields = ['invoice_no', 'user__username', 'shippingaddress__address', 'shippingaddress__city', 'shippingaddress__state', 'shippingaddress__postal_code']
+    list_filter = ['invoice_no', 'user__username', 'order_date', 'status', 'shippingaddress__city', 'shippingaddress__state', 'offer__name']
+
 
     def get_shipping_address(self, obj):
         shipping_address = obj.shippingaddress.first()

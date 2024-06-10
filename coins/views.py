@@ -3,21 +3,193 @@ from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib import messages
 from django.urls import reverse
 from .models import *
+from django.apps import apps
 from django.contrib.auth import views as auth_views
-from django.contrib.auth.decorators import login_required
+from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import update_session_auth_hash
 from django.http import HttpResponseRedirect
-from django.utils.decorators import method_decorator
-from django.urls import reverse_lazy
 from .forms import *
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.views.decorators.http import require_POST
 from decimal import Decimal
-from bson.decimal128 import create_decimal128_context
-import decimal
 from django.utils import timezone
-from bson.decimal128 import Decimal128
+from django.utils.dateparse import parse_date
+from datetime import datetime, timedelta
+from django_countries import countries as django_countries
+from django.http import HttpResponse
+from django.template.loader import render_to_string
+from weasyprint import HTML
+from openpyxl import Workbook
+from django.views.generic import ListView, CreateView, UpdateView, DeleteView
+from django.urls import reverse_lazy
 
+FORMS_FOR_TABLES = { 'Order': OrderForm, 'Coin' : CoinForm, 'Profile' : ProfileForm, 'SearchHistory' : SearchHistoryForm, 'CartItem' : CartItemForm, 'ShippingAddress' : ShippingAddressForm, 'OrderItem' : OrderItemForm, 'Offer' : OfferForm, }
+
+@login_required
+def export_orders_excel(request):
+    # Get order IDs from the form
+    order_ids_str = request.POST.get('order_ids', '')
+    order_ids = order_ids_str.split(',')
+
+    # Fetch orders corresponding to the IDs
+    orders = list(Order.objects.filter(id__in=order_ids, user=request.user))
+
+    # Create a new Excel workbook
+    wb = Workbook()
+    ws = wb.active
+
+    # Add headers to the worksheet
+    headers = ['Invoice No', 'Order Date', 'Shipping Address', 'Offers', 'Total Amount', 'Status']
+    ws.append(headers)
+
+    # Add order data to the worksheet
+    for order in orders:
+        row = [
+            order.invoice_no,
+            order.order_date.strftime("%Y-%m-%d"),  # Format the date as needed
+            ', '.join([f"{shipping.address},{shipping.city},{shipping.state},{shipping.country}-{shipping.postal_code}" for shipping in order.shippingaddress.all()]) if order.shippingaddress.all() else 'N/A',
+            ', '.join([f"{offer.name} ({offer.discount_percentage}%)" for offer in order.offer.all()]) if order.offer.all() else 'N/A',
+            order.calculate_discounted_total_amount(),
+            order.status
+        ]
+        ws.append(row)
+
+    # Generate the filename
+    username = request.user.username
+    current_datetime = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"orders_{username}_{current_datetime}.xlsx"
+
+    # Create HTTP response with Excel content
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    # Save the workbook to the response
+    wb.save(response)
+
+    return response
+
+@login_required
+def export_orders_pdf(request):
+    # Get order IDs from the form
+    order_ids_str = request.POST.get('order_ids', '')
+    order_ids = order_ids_str.split(',')
+    orders = Order.objects.filter(id__in=order_ids, user=request.user)
+    profile = get_object_or_404(Profile, user=request.user)
+    company = Company.objects.first()  # Assuming there's only one company in the database
+    username = request.user.username
+    current_datetime = timezone.now().strftime("%Y%m%d%H%M%S")
+    filename = f"orders_{username}_{current_datetime}.pdf"
+    html_string = render_to_string('orders_pdf.html', {'orders': orders, 'profile': profile, 'company': company})
+    pdf_file = HTML(string=html_string).write_pdf()
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+
+    return response
+
+@login_required
+def order_history_view(request):
+    orders = Order.objects.filter(user=request.user).order_by('-order_date')
+
+    # Calculate discounted total amount for each order
+    for order in orders:
+        order.discounted_total_amount = order.calculate_discounted_total_amount()
+
+    if request.method == 'POST':
+        from_date = request.POST.get('from_date')
+        to_date = request.POST.get('to_date')
+        invoice_no = request.POST.get('invoice_no')
+        city = request.POST.get('city')
+        state = request.POST.get('state')
+        country = request.POST.get('country')
+        total_amount_min = request.POST.get('total_amount_min')
+        total_amount_max = request.POST.get('total_amount_max')
+        status = request.POST.get('status')
+
+        if from_date and to_date:
+            from_date = parse_date(from_date)
+            to_date = parse_date(to_date) + timedelta(days=1) - timedelta(seconds=1)
+            orders = orders.filter(order_date__gte=from_date, order_date__lte=to_date)
+
+        if invoice_no:
+            orders = orders.filter(invoice_no__icontains=invoice_no)
+        
+        if city:
+            orders = orders.filter(shippingaddress__city__icontains=city)
+        
+        if state:
+            orders = orders.filter(shippingaddress__state__icontains=state)
+        
+        if country:
+            orders = orders.filter(shippingaddress__country__icontains=country)
+
+        if total_amount_min:
+            orders = [order for order in orders if order.discounted_total_amount >= Decimal(total_amount_min)]
+
+        if total_amount_max:
+            orders = [order for order in orders if order.discounted_total_amount <= Decimal(total_amount_max)]
+
+        if status:
+            orders = [order for order in orders if order.status == status]
+
+    return render(request, 'order_history.html', {'orders': orders, 'countries': django_countries})
+
+def superuser_required(user):
+    return user.is_superuser
+
+@login_required
+@user_passes_test(superuser_required)
+
+@login_required
+def order_history_users(request):
+    orders = Order.objects.all().order_by('-order_date')
+
+    # Calculate discounted total amount for each order
+    for order in orders:
+        order.discounted_total_amount = order.calculate_discounted_total_amount()
+
+    if request.method == 'POST':
+        from_date = request.POST.get('from_date')
+        to_date = request.POST.get('to_date')
+        invoice_no = request.POST.get('invoice_no')
+        user = request.POST.get('user')
+        city = request.POST.get('city')
+        state = request.POST.get('state')
+        country = request.POST.get('country')
+        total_amount_min = request.POST.get('total_amount_min')
+        total_amount_max = request.POST.get('total_amount_max')
+        status = request.POST.get('status')
+
+        if from_date and to_date:
+            from_date = parse_date(from_date)
+            to_date = parse_date(to_date) + timedelta(days=1) - timedelta(seconds=1)
+            orders = orders.filter(order_date__gte=from_date, order_date__lte=to_date)
+
+        if invoice_no:
+            orders = orders.filter(invoice_no=invoice_no)
+
+        if user:
+            orders = orders.filter(user__username=user)
+        
+        if city:
+            orders = orders.filter(shippingaddress__city__icontains=city)
+        
+        if state:
+            orders = orders.filter(shippingaddress__state__icontains=state)
+        
+        if country:
+            orders = orders.filter(shippingaddress__country__icontains=country)
+
+        if total_amount_min:
+            orders = [order for order in orders if order.discounted_total_amount >= Decimal(total_amount_min)]
+
+        if total_amount_max:
+            orders = [order for order in orders if order.discounted_total_amount <= Decimal(total_amount_max)]
+
+        if status:
+            orders = [order for order in orders if order.status == status]
+
+    return render(request, 'admin/order_history_users.html', {'orders': orders, 'countries': django_countries})
+   
 @login_required
 def select_shipping(request):
     user = request.user
@@ -334,60 +506,114 @@ def edit_coin(request, coin_id):
 
 @login_required
 def dashboard(request):
-    search_params = {}
-    coins_list = Coin.objects.all().order_by('-id')  # Initialize coins_list here
+    app_config = apps.get_app_config('coins')
+    tables = [model.__name__ for model in app_config.get_models()]
+    return render(request, 'admin/dashboard.html', {'tables': tables})
 
-    if request.method == 'POST':
-        # Handle search functionality and store search history
-        for key in request.POST:
-            if key != 'csrfmiddlewaretoken':
-                value = request.POST[key]
-                if value:
-                    # Get the field object from the Coin model
-                    field_object = Coin._meta.get_field(key)
-                    # Check if the field is an integer or number field
-                    if isinstance(field_object, (models.IntegerField, models.DecimalField, models.FloatField)):
-                        try:
-                            # Convert the value to the appropriate type
-                            value = field_object.to_python(value)
-                            # For integer and number fields, perform exact match
-                            search_params[key] = value
-                        except ValueError:
-                            # Handle the case where the value cannot be converted to the appropriate type
-                            messages.error(request, f'Invalid value for {key}. Please enter a valid number.')
-                            return redirect('coins:home')
-                    else:
-                        # Use __icontains for partial matching for non-integer fields
-                        search_params[key + '__icontains'] = value
-                    
-                    # Save search history to the database
-                    search_history = SearchHistory.objects.create(search_text=f'{key.capitalize()}: {value}')
-                    search_history.user.add(request.user)  # Add the current user to the user field
-                    search_history.save()
+def get_model_class(table_name):
+    return apps.get_model(app_label='coins', model_name=table_name)
 
-        # Filter coins based on search parameters
-        coins_list = coins_list.filter(**search_params)
+class DynamicListView(ListView):
+    template_name = 'admin/dynamic_list.html'
+    context_object_name = 'objects'
 
-    paginator = Paginator(coins_list, 10)  # Change 10 to the desired number of items per page
+    def get_queryset(self):
+        table_name = self.kwargs['table_name']
+        model_class = get_model_class(table_name)
+        return model_class.objects.all()
 
-    page = request.GET.get('page')
-    try:
-        coins = paginator.page(page)
-    except PageNotAnInteger:
-        coins = paginator.page(1)
-    except EmptyPage:
-        coins = paginator.page(paginator.num_pages)
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        table_name = self.kwargs['table_name']
+        context['fields'] = get_model_class(table_name)._meta.fields
+        context['table_name'] = table_name.lower()  # Convert table_name to lowercase
+        context['model_name'] = table_name.lower()  # Convert model name to lowercase
+        context['fields_length'] = len(context['fields'])
+        return context
 
-    coins_with_images = []
-    for coin in coins:
-        root_image = CoinImage.objects.filter(coin=coin, root_image='yes').first()
-        coins_with_images.append((coin, root_image))
+class DynamicCreateView(CreateView):
+    template_name = 'admin/dynamic_form.html'
+    fields = '__all__'
 
-    # Retrieve search history for the current user
-    search_history = SearchHistory.objects.filter(user=request.user).order_by('-timestamp')
+    def get_success_url(self):
+        table_name = self.kwargs.get('table_name', '')
+        if table_name:
+            return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
+        else:
+            pass
 
-    return render(request, 'dashboard.html', {'coins_with_images': coins_with_images, 'coins': coins, 'search_history': search_history})
+    def get_form(self, form_class=None):
+        table_name = self.kwargs['table_name']
+        model_class = get_model_class(table_name)
+        form_class = FORMS_FOR_TABLES.get(model_class.__name__, form_class)
+        if form_class:
+            return form_class(**self.get_form_kwargs())
+        else:
+            self.model = model_class
+            return super().get_form(form_class)
 
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['table_name'] = self.kwargs['table_name'].lower()  # Convert table_name to lowercase
+        return context
+
+class DynamicUpdateView(UpdateView):
+    template_name = 'admin/dynamic_form.html'
+    fields = '__all__'
+
+    def get_model(self):
+        table_name = self.kwargs['table_name']
+        return apps.get_model(app_label='coins', model_name=table_name)
+
+    def get_queryset(self):
+        model = self.get_model()
+        return model.objects.all()  # You can modify this queryset as needed
+
+    def get_success_url(self):
+        table_name = self.kwargs.get('table_name', '')
+        if table_name:
+            return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
+        else:
+            pass
+
+    def get_form(self, form_class=None):
+        table_name = self.kwargs['table_name']
+        model_class = get_model_class(table_name)
+        form_class = FORMS_FOR_TABLES.get(model_class.__name__, form_class)
+        if form_class:
+            return form_class(**self.get_form_kwargs())
+        else:
+            self.model = model_class
+            return super().get_form(form_class)
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['table_name'] = self.kwargs['table_name'].lower()
+        return context
+
+class DynamicDeleteView(DeleteView):
+    template_name = 'admin/dynamic_confirm_delete.html'  # Template for confirmation
+
+    def get_model(self):
+        table_name = self.kwargs['table_name']
+        return apps.get_model(app_label='coins', model_name=table_name)
+
+    def get_success_url(self):
+        table_name = self.kwargs.get('table_name', '')
+        if table_name:
+            return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
+        else:
+            pass
+
+    def get_queryset(self):
+        model = self.get_model()
+        return model.objects.all()
+
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        context['table_name'] = self.kwargs['table_name']
+        return context
+    
 @login_required
 def soft_delete_coin(request, coin_id):
     coin = get_object_or_404(Coin, pk=coin_id)
