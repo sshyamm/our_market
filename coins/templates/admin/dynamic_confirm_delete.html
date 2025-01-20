@@ -22,7 +22,13 @@
                             {% csrf_token %}
                             <div class="btn-group" role="group" aria-label="Delete actions">
                                 <button type="submit" class="btn btn-danger">Confirm Delete</button>
+                                {% if table_name == 'coinimage' %}
+                                <a href="{% url 'manage_coin_images' coin.pk %}" class="btn btn-secondary">Cancel</a>
+                                {% elif table_name == 'orderitem' %}
+                                <a href="{% url 'manage_order_items' order.pk %}" class="btn btn-secondary">Cancel</a>
+                                {% else %}
                                 <a href="{% url 'dynamic_list' table_name %}" class="btn btn-secondary">Cancel</a>
+                                {% endif %}
                             </div>
                         </form>
                     </div>

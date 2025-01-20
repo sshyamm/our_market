@@ -22,8 +22,9 @@ from weasyprint import HTML
 from openpyxl import Workbook
 from django.views.generic import ListView, CreateView, UpdateView, DeleteView
 from django.urls import reverse_lazy
+from django.contrib.admin.sites import site
 
-FORMS_FOR_TABLES = { 'Order': OrderForm, 'Coin' : CoinForm, 'Profile' : ProfileForm, 'SearchHistory' : SearchHistoryForm, 'CartItem' : CartItemForm, 'ShippingAddress' : ShippingAddressForm, 'OrderItem' : OrderItemForm, 'Offer' : OfferForm, }
+FORMS_FOR_TABLES = { 'Order': OrderForm, 'Coin' : CoinForm, 'CoinImage' : CoinImageForm, 'Profile' : ProfileForm, 'SearchHistory' : SearchHistoryForm, 'CartItem' : CartItemForm, 'ShippingAddress' : ShippingAddressForm, 'OrderItem' : OrderItemForm, 'Offer' : OfferForm, }
 
 @login_required
 def export_orders_excel(request):
@@ -507,8 +508,23 @@ def edit_coin(request, coin_id):
 @login_required
 def dashboard(request):
     app_config = apps.get_app_config('coins')
-    tables = [model.__name__ for model in app_config.get_models()]
+    tables = []
+
+    for model in app_config.get_models():
+        model_admin = site._registry.get(model)
+        if model_admin and model_admin.has_module_permission(request):
+            tables.append(model.__name__)
     return render(request, 'admin/dashboard.html', {'tables': tables})
+
+def manage_coin_images(request, coin_id):
+    coin = get_object_or_404(Coin, pk=coin_id)
+    coin_images = CoinImage.objects.filter(coin=coin)
+    return render(request, 'admin/manage_coin_images.html', {'coin': coin, 'coin_images': coin_images})
+
+def manage_order_items(request, order_id):
+    order = get_object_or_404(Order, pk=order_id)
+    order_items = OrderItem.objects.filter(order=order)
+    return render(request, 'admin/manage_order_items.html', {'order' : order, 'order_items': order_items})
 
 def get_model_class(table_name):
     return apps.get_model(app_label='coins', model_name=table_name)
@@ -525,10 +541,22 @@ class DynamicListView(ListView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         table_name = self.kwargs['table_name']
-        context['fields'] = get_model_class(table_name)._meta.fields
+        model_class = get_model_class(table_name)
+        
+        fields = model_class._meta.fields
+        context['fields'] = fields
         context['table_name'] = table_name.lower()  # Convert table_name to lowercase
         context['model_name'] = table_name.lower()  # Convert model name to lowercase
-        context['fields_length'] = len(context['fields'])
+        context['fields_length'] = len(fields)
+        
+        # Add logic to handle "Root Image" column for 'coin' table
+        if table_name.lower() == 'coin':
+            coins_with_images = [
+                (coin, CoinImage.objects.filter(coin=coin, root_image='yes').first())
+                for coin in context['objects']
+            ]
+            context['coins_with_images'] = coins_with_images
+        
         return context
 
 class DynamicCreateView(CreateView):
@@ -538,7 +566,14 @@ class DynamicCreateView(CreateView):
     def get_success_url(self):
         table_name = self.kwargs.get('table_name', '')
         if table_name:
-            return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
+            if table_name.lower() == 'coinimage':
+                coin_id = self.request.GET.get('coin_id')
+                return reverse_lazy('manage_coin_images', kwargs={'coin_id': coin_id})
+            elif table_name.lower() == 'orderitem':
+                order_id = self.request.GET.get('order_id')
+                return reverse_lazy('manage_order_items', kwargs={'order_id': order_id})
+            else:
+                return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
         else:
             pass
 
@@ -554,8 +589,30 @@ class DynamicCreateView(CreateView):
 
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        context['table_name'] = self.kwargs['table_name'].lower()  # Convert table_name to lowercase
+        table_name = self.kwargs['table_name']
+        context['table_name'] = table_name.lower()
+        
+        # Add logic to get the coin object if available
+        coin_id = self.request.GET.get('coin_id')
+        order_id = self.request.GET.get('order_id')
+        if coin_id:
+            coin = get_object_or_404(Coin, pk=coin_id)
+            context['coin'] = coin
+        if order_id:
+            order = get_object_or_404(Order, pk=order_id)
+            context['order'] = order
+
         return context
+
+    def get_initial(self):
+        initial = super().get_initial()
+        coin_id = self.request.GET.get('coin_id')
+        order_id = self.request.GET.get('order_id')
+        if coin_id:
+            initial['coin'] = coin_id
+        if order_id:
+            initial['order'] = order_id
+        return initial
 
 class DynamicUpdateView(UpdateView):
     template_name = 'admin/dynamic_form.html'
@@ -572,7 +629,14 @@ class DynamicUpdateView(UpdateView):
     def get_success_url(self):
         table_name = self.kwargs.get('table_name', '')
         if table_name:
-            return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
+            if table_name.lower() == 'coinimage':
+                coin_id = self.request.GET.get('coin_id')
+                return reverse_lazy('manage_coin_images', kwargs={'coin_id': coin_id})
+            elif table_name.lower() == 'orderitem':
+                order_id = self.request.GET.get('order_id')
+                return reverse_lazy('manage_order_items', kwargs={'order_id': order_id})
+            else:
+                return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
         else:
             pass
 
@@ -589,6 +653,14 @@ class DynamicUpdateView(UpdateView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['table_name'] = self.kwargs['table_name'].lower()
+        coin_id = self.request.GET.get('coin_id')
+        order_id = self.request.GET.get('order_id')
+        if coin_id:
+            coin = get_object_or_404(Coin, pk=coin_id)
+            context['coin'] = coin
+        if order_id:
+            order = get_object_or_404(Order, pk=order_id)
+            context['order'] = order
         return context
 
 class DynamicDeleteView(DeleteView):
@@ -601,7 +673,11 @@ class DynamicDeleteView(DeleteView):
     def get_success_url(self):
         table_name = self.kwargs.get('table_name', '')
         if table_name:
-            return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
+            if table_name.lower() == 'coinimage':
+                coin_id = self.request.GET.get('coin_id')
+                return reverse_lazy('manage_coin_images', kwargs={'coin_id': coin_id})
+            else:
+                return reverse_lazy('dynamic_list', kwargs={'table_name': table_name})
         else:
             pass
 
@@ -612,6 +688,14 @@ class DynamicDeleteView(DeleteView):
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['table_name'] = self.kwargs['table_name']
+        coin_id = self.request.GET.get('coin_id')
+        order_id = self.request.GET.get('order_id')
+        if coin_id:
+            coin = get_object_or_404(Coin, pk=coin_id)
+            context['coin'] = coin
+        if order_id:
+            order = get_object_or_404(Order, pk=order_id)
+            context['order'] = order
         return context
     
 @login_required

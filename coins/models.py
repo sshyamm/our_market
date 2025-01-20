@@ -63,6 +63,9 @@ class CoinImage(models.Model):
         # Check if more than one CoinImage is marked as root_image='yes' for the same Coin
         if self.root_image == 'yes' and self.coin.first().coinimage_set.filter(root_image='yes').exclude(pk=self.pk).count() > 0:
             raise ValidationError("Only one CoinImage can be marked as root_image='yes' for a Coin.")
+        if self.root_image == 'yes' and not self.image:
+            raise ValidationError("Cannot set root_image to 'yes' without uploading an image.")
+        
         super().clean()
            
 @receiver(post_save, sender=Coin)

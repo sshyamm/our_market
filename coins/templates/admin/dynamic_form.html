@@ -24,7 +24,13 @@
             <div class="col-md-10">
                 <div class="card mt-4">
                     <div class="card-body">
+                        {% if table_name == 'coinimage' %}
+                        <h3 class="card-title""><strong>{{ table_name|title }} Form</strong> <a href="{% url 'manage_coin_images' coin.pk %}" class="btn btn-warning">Return</a></h3>
+                        {% elif table_name == 'orderitem' %}
+                        <h3 class="card-title""><strong>{{ table_name|title }} Form</strong> <a href="{% url 'manage_order_items' order.pk %}" class="btn btn-warning">Return</a></h3>
+                        {% else %}
                         <h3 class="card-title""><strong>{{ table_name|title }} Form</strong> <a href="{% url 'dynamic_list' table_name %}" class="btn btn-warning">Return</a></h3>
+                        {% endif %}
                         <form method="post" enctype="multipart/form-data">
                             {% csrf_token %}
                             {% bootstrap_form form %}                           

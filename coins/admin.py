@@ -25,7 +25,8 @@ def display_coin_image(obj):
     if obj.image:
         return format_html('<img src="{}" style="max-width:100px; max-height:100px;">'.format(obj.image.url))
     else:
-        return "Null"
+        default_image_url = '/static/img/default.jpg'  
+        return format_html('<img src="{}" style="max-width:100px; max-height:100px;">'.format(default_image_url))
         
 
 @admin.register(Coin)
